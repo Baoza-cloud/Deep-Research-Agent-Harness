@@ -1,6 +1,4 @@
 import os
-
-
 def load_text(file_path):
     """
     读取txt文件
@@ -25,5 +23,5 @@ if __name__ == "__main__":
 
     document = load_text(file_path)
 
-    print("文档内容:")
+    print("====文档内容====:")
     print(document)
