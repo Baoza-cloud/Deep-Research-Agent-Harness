@@ -6,7 +6,11 @@ from pathlib import Path
 
 from prompt_builder import build_prompt
 from llm_client import generate_answer
-
+from context_builder import build_context
+from prompt_builder import build_prompt
+from source_builder import build_sources
+from llm_client import generate_answer
+from relevance_filter import filter_results
 
 # 当前 src 文件夹
 SRC_DIR = Path(__file__).resolve().parent
@@ -77,61 +81,327 @@ def retrieve_in_subprocess(query, top_k=3):
         "但没有找到检索结果"
     )
 
-def rag_answer(query, top_k=3):
+def rag_answer(
+    question,
+    top_k=5,
+    max_distance=1.0
+):
 
-    # ============================
-    # R：Retrieval
-    # ============================
+    # =========================
+    # 1. Question
+    # =========================
+
+    print("\n① Question")
+    print(question)
+
+
+    # =========================
+    # 2. Retrieval
+    # =========================
+
+    print("\n② Retrieval")
 
     retrieved_results = retrieve_in_subprocess(
-        query=query,
+        query=question,
         top_k=top_k
     )
+    print("\n===== 原始 Retrieval 结果 =====")
 
-    print("③ 检索完成", flush=True)
+    for result in retrieved_results:
+        print(
+            f"chunk_id={result['chunk_id']} | "
+            f"distance={result['distance']:.4f} | "
+            f"source={result['source']}"
+        )
+        print(result["text"])
+        print()
 
-
-    # ============================
-    # A：Augmentation
-    # ============================
-
-    print("④ 开始构造 Prompt", flush=True)
-
-    prompt = build_prompt(
-        query=query,
-        retrieved_results=retrieved_results
+    filtered_results = filter_results(
+        retrieved_results,
+        max_distance=1.0,
+        max_chunks=3
     )
 
-    print("⑤ Prompt 构造完成", flush=True)
+    print("\n===== Filter 后结果 =====")
+
+    for result in filtered_results:
+        print(
+            f"chunk_id={result['chunk_id']} | "
+            f"distance={result['distance']:.4f} | "
+            f"source={result['source']}"
+        )
+        print(result["text"])
+        print()
+
+    # =========================
+    # 3. Filter
+    # =========================
+
+    print("\n③ Relevance Filter")
+
+    filtered_results = filter_results(
+        retrieved_results,
+        max_distance=max_distance,
+        max_chunks=3
+    )
+    if not filtered_results:
+        return {
+            "question": question,
+            "retrieval": retrieved_results,
+            "filtered_results": [],
+            "context": "",
+            "prompt": "",
+            "answer": (
+                "根据当前企业知识库，"
+                "没有检索到足够相关的资料，"
+                "暂时无法回答该问题。"
+            ),
+            "sources": []
+        }
+    context = build_context(
+        filtered_results
+    )
+
+    print("\n===== Context =====")
+    print(context)
+
+    # =========================
+    # 4. Fallback
+    # =========================
+
+    if not filtered_results:
+
+        answer = (
+            "根据当前企业知识库，"
+            "没有检索到足够相关的资料，"
+            "暂时无法回答该问题。"
+        )
+
+        return {
+            "question": question,
+            "retrieval": retrieved_results,
+            "filtered_results": [],
+            "context": "",
+            "prompt": "",
+            "answer": answer,
+            "sources": []
+        }
 
 
-    # ============================
-    # G：Generation
-    # ============================
+    # =========================
+    # 5. Context
+    # =========================
 
-    print("⑥ 开始调用 DeepSeek", flush=True)
+    print("\n④ Context")
+
+    context = build_context(
+        filtered_results
+    )
+
+
+    # =========================
+    # 6. Prompt
+    # =========================
+
+    print("\n⑤ Prompt")
+
+    prompt = build_prompt(
+        query=question,
+        context=context
+    )
+
+
+    # =========================
+    # 7. LLM
+    # =========================
+
+    print("\n⑥ LLM")
 
     answer = generate_answer(prompt)
 
-    print("⑦ DeepSeek 回答完成", flush=True)
 
-    return answer
+    # =========================
+    # 8. Sources
+    # =========================
+
+    sources = build_sources(
+        filtered_results
+    )
+
+
+    # =========================
+    # 9. Final Result
+    # =========================
+
+    return {
+        "question": question,
+        "retrieval": retrieved_results,
+        "filtered_results": filtered_results,
+        "context": context,
+        "prompt": prompt,
+        "answer": answer,
+        "sources": sources
+    }
 
 
 if __name__ == "__main__":
 
-    query = "公司的年假制度是什么？"
+    import json
+    from pathlib import Path
 
-    print("\n用户问题：")
-    print(query)
+    # =========================
+    # 1. 三个测试问题
+    # =========================
 
-    answer = rag_answer(
-        query=query,
-        top_k=3
+    test_questions = [
+        "公司的年假制度是什么？",
+        "员工报销需要遵守什么规定？",
+        "公司有没有健身房补贴？"
+    ]
+
+
+    # =========================
+    # 2. 保存所有测试结果
+    # =========================
+
+    all_results = []
+
+
+    # =========================
+    # 3. 连续测试三个问题
+    # =========================
+
+    for i, question in enumerate(
+        test_questions,
+        start=1
+    ):
+
+        print("\n")
+        print("=" * 70)
+        print(f"测试问题 {i}")
+        print("=" * 70)
+
+        print("\nQuestion:")
+        print(question)
+
+
+        result = rag_answer(
+            question=question,
+            top_k=5,
+            max_distance=1.0
+        )
+
+
+        # 保存结果
+        all_results.append(result)
+
+
+        # =====================
+        # 打印 Retrieval
+        # =====================
+
+        print("\n----- 原始 Retrieval -----")
+
+        for item in result["retrieval"]:
+
+            print(
+                f"chunk_id={item['chunk_id']} | "
+                f"distance={item['distance']:.4f} | "
+                f"source={item['source']}"
+            )
+
+            print(item["text"])
+            print()
+
+
+        # =====================
+        # 打印 Filter 结果
+        # =====================
+
+        print("\n----- Filter 后 -----")
+
+        if result["filtered_results"]:
+
+            for item in result["filtered_results"]:
+
+                print(
+                    f"chunk_id={item['chunk_id']} | "
+                    f"distance={item['distance']:.4f}"
+                )
+
+                print(item["text"])
+                print()
+
+        else:
+
+            print("没有通过相关性筛选的资料")
+
+
+        # =====================
+        # 最终 Answer
+        # =====================
+
+        print("\n----- 最终回答 -----")
+        print(result["answer"])
+
+
+        # =====================
+        # Sources
+        # =====================
+
+        print("\n----- Sources -----")
+
+        if result["sources"]:
+
+            for source in result["sources"]:
+                print("-", source)
+
+        else:
+            print("无")
+
+
+    # =========================
+    # 4. 保存 JSON
+    # =========================
+
+    BASE_DIR = Path(__file__).resolve().parent.parent
+
+    RESULT_PATH = (
+        BASE_DIR
+        / "evaluation"
+        / "baseline_v2_results.json"
     )
 
-    print("\n" + "=" * 60)
-    print("最终回答")
-    print("=" * 60)
+    # 防止 evaluation 文件夹不存在
+    RESULT_PATH.parent.mkdir(
+        parents=True,
+        exist_ok=True
+    )
 
-    print(answer)
+
+    with open(
+        RESULT_PATH,
+        "w",
+        encoding="utf-8"
+    ) as f:
+
+        json.dump(
+            all_results,
+            f,
+            ensure_ascii=False,
+            indent=2
+        )
+
+
+    print("\n")
+    print("=" * 70)
+    print("三个问题测试全部完成")
+    print("=" * 70)
+
+    print(
+        "结果已保存到：",
+        RESULT_PATH
+    )
+
+
+
