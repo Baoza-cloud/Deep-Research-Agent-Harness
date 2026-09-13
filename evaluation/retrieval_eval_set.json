@@ -1,0 +1,44 @@
+[
+    {
+        "query": "公司的年假制度是什么？",
+        "relevant_chunk_ids": [5],
+        "type": "keyword",
+        "should_fallback": false
+    },
+    {
+        "query": "工作满一年以后能休假吗？",
+        "relevant_chunk_ids": [5],
+        "type": "semantic",
+        "should_fallback": false
+    },
+    {
+        "query": "员工报销需要遵守什么规定？",
+        "relevant_chunk_ids": [6,7],
+        "type": "keyword",
+        "should_fallback": false
+    },
+    {
+        "query": "我出差回来以后费用应该怎么处理？",
+        "relevant_chunk_ids": [6,7],
+        "type": "semantic",
+        "should_fallback": false
+    },
+    {
+        "query": "公司有没有健身房补贴？",
+        "relevant_chunk_ids": [],
+        "type": "out_of_domain",
+        "should_fallback": true
+    },
+    {
+        "query": "公司是否提供免费宿舍？",
+        "relevant_chunk_ids": [],
+        "type": "out_of_domain",
+        "should_fallback": true
+    },
+    {
+        "query": "公司有没有股票期权？",
+        "relevant_chunk_ids": [],
+        "type": "out_of_domain",
+        "should_fallback": true
+    }
+]

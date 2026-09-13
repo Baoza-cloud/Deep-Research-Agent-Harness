@@ -1,0 +1,482 @@
+[
+    {
+        "question": "公司的年假制度是什么？",
+        "dense_results": [
+            {
+                "chunk_id": 5,
+                "distance": 0.6230806112289429,
+                "text": "，需要经过部门负责人审批。\n\n\n第三章 年假制度\n\n员工入职满一年后，可以享受带薪年假。\n\n年假天数根据员工工作年限计算。\n\n员工需要提前提交年假申请。\n\n\n第四章 报销制度\n\n员工因工作产生的费用，",
+                "source": "company_policy.txt"
+            },
+            {
+                "chunk_id": 4,
+                "distance": 0.6821326017379761,
+                "text": "并提前通知直属主管。\n\n\n2. 事假\n\n员工因个人事务需要请假，应提前提交申请。\n\n请假时间超过三天，需要经过部门负责人审批。\n\n\n第三章 年假制度\n\n员工入职满一年后，可以享受带薪年假。\n\n年假天数",
+                "source": "company_policy.txt"
+            },
+            {
+                "chunk_id": 6,
+                "distance": 0.7558655738830566,
+                "text": "根据员工工作年限计算。\n\n员工需要提前提交年假申请。\n\n\n第四章 报销制度\n\n员工因工作产生的费用，可以申请报销。\n\n报销需要提交：\n\n1. 发票\n2. 报销申请单\n3. 相关证明材料\n\n财务部门审核",
+                "source": "company_policy.txt"
+            },
+            {
+                "chunk_id": 3,
+                "distance": 0.7704707384109497,
+                "text": "二章 请假制度\n\n1. 病假\n\n员工因身体原因无法工作，可以申请病假。\n\n申请病假需要提交相关证明，并提前通知直属主管。\n\n\n2. 事假\n\n员工因个人事务需要请假，应提前提交申请。\n\n请假时间超过三天",
+                "source": "company_policy.txt"
+            },
+            {
+                "chunk_id": 2,
+                "distance": 0.9302570819854736,
+                "text": "。\n如果员工迟到或者早退，需要及时向直属主管说明原因。\n\n连续多次迟到可能影响员工绩效考核。\n\n\n第二章 请假制度\n\n1. 病假\n\n员工因身体原因无法工作，可以申请病假。\n\n申请病假需要提交相关证明，",
+                "source": "company_policy.txt"
+            }
+        ],
+        "bm25_results": [
+            {
+                "chunk_id": 5,
+                "bm25_score": 4.125130511153759,
+                "text": "，需要经过部门负责人审批。\n\n\n第三章 年假制度\n\n员工入职满一年后，可以享受带薪年假。\n\n年假天数根据员工工作年限计算。\n\n员工需要提前提交年假申请。\n\n\n第四章 报销制度\n\n员工因工作产生的费用，",
+                "source": "company_policy.txt",
+                "retrieval_type": "bm25"
+            },
+            {
+                "chunk_id": 6,
+                "bm25_score": 2.8786456459054763,
+                "text": "根据员工工作年限计算。\n\n员工需要提前提交年假申请。\n\n\n第四章 报销制度\n\n员工因工作产生的费用，可以申请报销。\n\n报销需要提交：\n\n1. 发票\n2. 报销申请单\n3. 相关证明材料\n\n财务部门审核",
+                "source": "company_policy.txt",
+                "retrieval_type": "bm25"
+            },
+            {
+                "chunk_id": 4,
+                "bm25_score": 2.6337366516693144,
+                "text": "并提前通知直属主管。\n\n\n2. 事假\n\n员工因个人事务需要请假，应提前提交申请。\n\n请假时间超过三天，需要经过部门负责人审批。\n\n\n第三章 年假制度\n\n员工入职满一年后，可以享受带薪年假。\n\n年假天数",
+                "source": "company_policy.txt",
+                "retrieval_type": "bm25"
+            },
+            {
+                "chunk_id": 0,
+                "bm25_score": 0.9189208325791749,
+                "text": "企业员工管理制度\n\n第一章 公司基本制度\n\n1. 工作时间\n\n公司采用标准工作制度。\n员工工作时间为周一至周五，每天8小时。\n员工需要按照公司规定完成考勤。\n\n\n2. 考勤管理\n\n员工每天需要进行签到",
+                "source": "company_policy.txt",
+                "retrieval_type": "bm25"
+            },
+            {
+                "chunk_id": 8,
+                "bm25_score": 0.8131263338533365,
+                "text": "通过后进行报销。\n\n\n第五章 离职制度\n\n员工离职需要提前提交离职申请。\n\n普通员工需要提前30天通知公司。\n\n离职流程完成后，公司进行工资结算。",
+                "source": "company_policy.txt",
+                "retrieval_type": "bm25"
+            }
+        ],
+        "hybrid_results": [
+            {
+                "chunk_id": 5,
+                "text": "，需要经过部门负责人审批。\n\n\n第三章 年假制度\n\n员工入职满一年后，可以享受带薪年假。\n\n年假天数根据员工工作年限计算。\n\n员工需要提前提交年假申请。\n\n\n第四章 报销制度\n\n员工因工作产生的费用，",
+                "source": "company_policy.txt",
+                "rrf_score": 0.03278688524590164,
+                "dense_rank": 1,
+                "bm25_rank": 1,
+                "dense_distance": 0.6230806112289429,
+                "bm25_score": 4.125130511153759,
+                "retrieval_type": "hybrid"
+            },
+            {
+                "chunk_id": 4,
+                "text": "并提前通知直属主管。\n\n\n2. 事假\n\n员工因个人事务需要请假，应提前提交申请。\n\n请假时间超过三天，需要经过部门负责人审批。\n\n\n第三章 年假制度\n\n员工入职满一年后，可以享受带薪年假。\n\n年假天数",
+                "source": "company_policy.txt",
+                "rrf_score": 0.03200204813108039,
+                "dense_rank": 2,
+                "bm25_rank": 3,
+                "dense_distance": 0.6821326017379761,
+                "bm25_score": 2.6337366516693144,
+                "retrieval_type": "hybrid"
+            },
+            {
+                "chunk_id": 6,
+                "text": "根据员工工作年限计算。\n\n员工需要提前提交年假申请。\n\n\n第四章 报销制度\n\n员工因工作产生的费用，可以申请报销。\n\n报销需要提交：\n\n1. 发票\n2. 报销申请单\n3. 相关证明材料\n\n财务部门审核",
+                "source": "company_policy.txt",
+                "rrf_score": 0.03200204813108039,
+                "dense_rank": 3,
+                "bm25_rank": 2,
+                "dense_distance": 0.7558655738830566,
+                "bm25_score": 2.8786456459054763,
+                "retrieval_type": "hybrid"
+            },
+            {
+                "chunk_id": 3,
+                "text": "二章 请假制度\n\n1. 病假\n\n员工因身体原因无法工作，可以申请病假。\n\n申请病假需要提交相关证明，并提前通知直属主管。\n\n\n2. 事假\n\n员工因个人事务需要请假，应提前提交申请。\n\n请假时间超过三天",
+                "source": "company_policy.txt",
+                "rrf_score": 0.015625,
+                "dense_rank": 4,
+                "bm25_rank": null,
+                "dense_distance": 0.7704707384109497,
+                "bm25_score": null,
+                "retrieval_type": "hybrid"
+            },
+            {
+                "chunk_id": 0,
+                "text": "企业员工管理制度\n\n第一章 公司基本制度\n\n1. 工作时间\n\n公司采用标准工作制度。\n员工工作时间为周一至周五，每天8小时。\n员工需要按照公司规定完成考勤。\n\n\n2. 考勤管理\n\n员工每天需要进行签到",
+                "source": "company_policy.txt",
+                "rrf_score": 0.015625,
+                "dense_rank": null,
+                "bm25_rank": 4,
+                "dense_distance": null,
+                "bm25_score": 0.9189208325791749,
+                "retrieval_type": "hybrid"
+            }
+        ],
+        "filtered_results": [
+            {
+                "chunk_id": 5,
+                "text": "，需要经过部门负责人审批。\n\n\n第三章 年假制度\n\n员工入职满一年后，可以享受带薪年假。\n\n年假天数根据员工工作年限计算。\n\n员工需要提前提交年假申请。\n\n\n第四章 报销制度\n\n员工因工作产生的费用，",
+                "source": "company_policy.txt",
+                "rrf_score": 0.03278688524590164,
+                "dense_rank": 1,
+                "bm25_rank": 1,
+                "dense_distance": 0.6230806112289429,
+                "bm25_score": 4.125130511153759,
+                "retrieval_type": "hybrid",
+                "filter_reason": "dense_semantic_match"
+            },
+            {
+                "chunk_id": 4,
+                "text": "并提前通知直属主管。\n\n\n2. 事假\n\n员工因个人事务需要请假，应提前提交申请。\n\n请假时间超过三天，需要经过部门负责人审批。\n\n\n第三章 年假制度\n\n员工入职满一年后，可以享受带薪年假。\n\n年假天数",
+                "source": "company_policy.txt",
+                "rrf_score": 0.03200204813108039,
+                "dense_rank": 2,
+                "bm25_rank": 3,
+                "dense_distance": 0.6821326017379761,
+                "bm25_score": 2.6337366516693144,
+                "retrieval_type": "hybrid",
+                "filter_reason": "dense_semantic_match"
+            },
+            {
+                "chunk_id": 6,
+                "text": "根据员工工作年限计算。\n\n员工需要提前提交年假申请。\n\n\n第四章 报销制度\n\n员工因工作产生的费用，可以申请报销。\n\n报销需要提交：\n\n1. 发票\n2. 报销申请单\n3. 相关证明材料\n\n财务部门审核",
+                "source": "company_policy.txt",
+                "rrf_score": 0.03200204813108039,
+                "dense_rank": 3,
+                "bm25_rank": 2,
+                "dense_distance": 0.7558655738830566,
+                "bm25_score": 2.8786456459054763,
+                "retrieval_type": "hybrid",
+                "filter_reason": "dense_semantic_match"
+            }
+        ],
+        "context": "[参考资料 1]\n来源：company_policy.txt\n内容：，需要经过部门负责人审批。\n\n\n第三章 年假制度\n\n员工入职满一年后，可以享受带薪年假。\n\n年假天数根据员工工作年限计算。\n\n员工需要提前提交年假申请。\n\n\n第四章 报销制度\n\n员工因工作产生的费用，\n\n[参考资料 2]\n来源：company_policy.txt\n内容：并提前通知直属主管。\n\n\n2. 事假\n\n员工因个人事务需要请假，应提前提交申请。\n\n请假时间超过三天，需要经过部门负责人审批。\n\n\n第三章 年假制度\n\n员工入职满一年后，可以享受带薪年假。\n\n年假天数\n\n[参考资料 3]\n来源：company_policy.txt\n内容：根据员工工作年限计算。\n\n员工需要提前提交年假申请。\n\n\n第四章 报销制度\n\n员工因工作产生的费用，可以申请报销。\n\n报销需要提交：\n\n1. 发票\n2. 报销申请单\n3. 相关证明材料\n\n财务部门审核",
+        "prompt": "你是一个企业内部知识库助手。\n\n请严格依据参考资料回答用户问题。\n\n规则：\n1. 只能根据参考资料回答。\n2. 不得编造资料中不存在的信息。\n3. 不得根据常识补充具体数字、日期或制度。\n4. 忽略与用户问题无关的参考资料。\n5. 回答简洁、准确。\n6. 不需要在正文中重复完整参考资料。\n\n参考资料：\n\n[参考资料 1]\n来源：company_policy.txt\n内容：，需要经过部门负责人审批。\n\n\n第三章 年假制度\n\n员工入职满一年后，可以享受带薪年假。\n\n年假天数根据员工工作年限计算。\n\n员工需要提前提交年假申请。\n\n\n第四章 报销制度\n\n员工因工作产生的费用，\n\n[参考资料 2]\n来源：company_policy.txt\n内容：并提前通知直属主管。\n\n\n2. 事假\n\n员工因个人事务需要请假，应提前提交申请。\n\n请假时间超过三天，需要经过部门负责人审批。\n\n\n第三章 年假制度\n\n员工入职满一年后，可以享受带薪年假。\n\n年假天数\n\n[参考资料 3]\n来源：company_policy.txt\n内容：根据员工工作年限计算。\n\n员工需要提前提交年假申请。\n\n\n第四章 报销制度\n\n员工因工作产生的费用，可以申请报销。\n\n报销需要提交：\n\n1. 发票\n2. 报销申请单\n3. 相关证明材料\n\n财务部门审核\n\n用户问题：\n\n公司的年假制度是什么？\n\n请给出回答：",
+        "answer": "根据参考资料，公司年假制度包括：员工入职满一年后可享受带薪年假；年假天数根据员工工作年限计算；员工需要提前提交年假申请。",
+        "sources": [
+            "company_policy.txt"
+        ]
+    },
+    {
+        "question": "工作满一年之后能休假吗？",
+        "dense_results": [
+            {
+                "chunk_id": 5,
+                "distance": 0.5997194051742554,
+                "text": "，需要经过部门负责人审批。\n\n\n第三章 年假制度\n\n员工入职满一年后，可以享受带薪年假。\n\n年假天数根据员工工作年限计算。\n\n员工需要提前提交年假申请。\n\n\n第四章 报销制度\n\n员工因工作产生的费用，",
+                "source": "company_policy.txt"
+            },
+            {
+                "chunk_id": 4,
+                "distance": 0.6660892963409424,
+                "text": "并提前通知直属主管。\n\n\n2. 事假\n\n员工因个人事务需要请假，应提前提交申请。\n\n请假时间超过三天，需要经过部门负责人审批。\n\n\n第三章 年假制度\n\n员工入职满一年后，可以享受带薪年假。\n\n年假天数",
+                "source": "company_policy.txt"
+            },
+            {
+                "chunk_id": 3,
+                "distance": 0.7768512964248657,
+                "text": "二章 请假制度\n\n1. 病假\n\n员工因身体原因无法工作，可以申请病假。\n\n申请病假需要提交相关证明，并提前通知直属主管。\n\n\n2. 事假\n\n员工因个人事务需要请假，应提前提交申请。\n\n请假时间超过三天",
+                "source": "company_policy.txt"
+            },
+            {
+                "chunk_id": 2,
+                "distance": 0.8270065784454346,
+                "text": "。\n如果员工迟到或者早退，需要及时向直属主管说明原因。\n\n连续多次迟到可能影响员工绩效考核。\n\n\n第二章 请假制度\n\n1. 病假\n\n员工因身体原因无法工作，可以申请病假。\n\n申请病假需要提交相关证明，",
+                "source": "company_policy.txt"
+            },
+            {
+                "chunk_id": 6,
+                "distance": 0.8496294617652893,
+                "text": "根据员工工作年限计算。\n\n员工需要提前提交年假申请。\n\n\n第四章 报销制度\n\n员工因工作产生的费用，可以申请报销。\n\n报销需要提交：\n\n1. 发票\n2. 报销申请单\n3. 相关证明材料\n\n财务部门审核",
+                "source": "company_policy.txt"
+            }
+        ],
+        "bm25_results": [
+            {
+                "chunk_id": 5,
+                "bm25_score": 1.1376539633672145,
+                "text": "，需要经过部门负责人审批。\n\n\n第三章 年假制度\n\n员工入职满一年后，可以享受带薪年假。\n\n年假天数根据员工工作年限计算。\n\n员工需要提前提交年假申请。\n\n\n第四章 报销制度\n\n员工因工作产生的费用，",
+                "source": "company_policy.txt",
+                "retrieval_type": "bm25"
+            },
+            {
+                "chunk_id": 4,
+                "bm25_score": 1.126642040727609,
+                "text": "并提前通知直属主管。\n\n\n2. 事假\n\n员工因个人事务需要请假，应提前提交申请。\n\n请假时间超过三天，需要经过部门负责人审批。\n\n\n第三章 年假制度\n\n员工入职满一年后，可以享受带薪年假。\n\n年假天数",
+                "source": "company_policy.txt",
+                "retrieval_type": "bm25"
+            },
+            {
+                "chunk_id": 9,
+                "bm25_score": 0.0,
+                "text": "知公司。\n\n离职流程完成后，公司进行工资结算。",
+                "source": "company_policy.txt",
+                "retrieval_type": "bm25"
+            },
+            {
+                "chunk_id": 8,
+                "bm25_score": 0.0,
+                "text": "通过后进行报销。\n\n\n第五章 离职制度\n\n员工离职需要提前提交离职申请。\n\n普通员工需要提前30天通知公司。\n\n离职流程完成后，公司进行工资结算。",
+                "source": "company_policy.txt",
+                "retrieval_type": "bm25"
+            },
+            {
+                "chunk_id": 7,
+                "bm25_score": 0.0,
+                "text": "可以申请报销。\n\n报销需要提交：\n\n1. 发票\n2. 报销申请单\n3. 相关证明材料\n\n财务部门审核通过后进行报销。\n\n\n第五章 离职制度\n\n员工离职需要提前提交离职申请。\n\n普通员工需要提前30天通",
+                "source": "company_policy.txt",
+                "retrieval_type": "bm25"
+            }
+        ],
+        "hybrid_results": [
+            {
+                "chunk_id": 5,
+                "text": "，需要经过部门负责人审批。\n\n\n第三章 年假制度\n\n员工入职满一年后，可以享受带薪年假。\n\n年假天数根据员工工作年限计算。\n\n员工需要提前提交年假申请。\n\n\n第四章 报销制度\n\n员工因工作产生的费用，",
+                "source": "company_policy.txt",
+                "rrf_score": 0.03278688524590164,
+                "dense_rank": 1,
+                "bm25_rank": 1,
+                "dense_distance": 0.5997194051742554,
+                "bm25_score": 1.1376539633672145,
+                "retrieval_type": "hybrid"
+            },
+            {
+                "chunk_id": 4,
+                "text": "并提前通知直属主管。\n\n\n2. 事假\n\n员工因个人事务需要请假，应提前提交申请。\n\n请假时间超过三天，需要经过部门负责人审批。\n\n\n第三章 年假制度\n\n员工入职满一年后，可以享受带薪年假。\n\n年假天数",
+                "source": "company_policy.txt",
+                "rrf_score": 0.03225806451612903,
+                "dense_rank": 2,
+                "bm25_rank": 2,
+                "dense_distance": 0.6660892963409424,
+                "bm25_score": 1.126642040727609,
+                "retrieval_type": "hybrid"
+            },
+            {
+                "chunk_id": 3,
+                "text": "二章 请假制度\n\n1. 病假\n\n员工因身体原因无法工作，可以申请病假。\n\n申请病假需要提交相关证明，并提前通知直属主管。\n\n\n2. 事假\n\n员工因个人事务需要请假，应提前提交申请。\n\n请假时间超过三天",
+                "source": "company_policy.txt",
+                "rrf_score": 0.015873015873015872,
+                "dense_rank": 3,
+                "bm25_rank": null,
+                "dense_distance": 0.7768512964248657,
+                "bm25_score": null,
+                "retrieval_type": "hybrid"
+            },
+            {
+                "chunk_id": 9,
+                "text": "知公司。\n\n离职流程完成后，公司进行工资结算。",
+                "source": "company_policy.txt",
+                "rrf_score": 0.015873015873015872,
+                "dense_rank": null,
+                "bm25_rank": 3,
+                "dense_distance": null,
+                "bm25_score": 0.0,
+                "retrieval_type": "hybrid"
+            },
+            {
+                "chunk_id": 2,
+                "text": "。\n如果员工迟到或者早退，需要及时向直属主管说明原因。\n\n连续多次迟到可能影响员工绩效考核。\n\n\n第二章 请假制度\n\n1. 病假\n\n员工因身体原因无法工作，可以申请病假。\n\n申请病假需要提交相关证明，",
+                "source": "company_policy.txt",
+                "rrf_score": 0.015625,
+                "dense_rank": 4,
+                "bm25_rank": null,
+                "dense_distance": 0.8270065784454346,
+                "bm25_score": null,
+                "retrieval_type": "hybrid"
+            }
+        ],
+        "filtered_results": [
+            {
+                "chunk_id": 5,
+                "text": "，需要经过部门负责人审批。\n\n\n第三章 年假制度\n\n员工入职满一年后，可以享受带薪年假。\n\n年假天数根据员工工作年限计算。\n\n员工需要提前提交年假申请。\n\n\n第四章 报销制度\n\n员工因工作产生的费用，",
+                "source": "company_policy.txt",
+                "rrf_score": 0.03278688524590164,
+                "dense_rank": 1,
+                "bm25_rank": 1,
+                "dense_distance": 0.5997194051742554,
+                "bm25_score": 1.1376539633672145,
+                "retrieval_type": "hybrid",
+                "filter_reason": "dense_semantic_match"
+            },
+            {
+                "chunk_id": 4,
+                "text": "并提前通知直属主管。\n\n\n2. 事假\n\n员工因个人事务需要请假，应提前提交申请。\n\n请假时间超过三天，需要经过部门负责人审批。\n\n\n第三章 年假制度\n\n员工入职满一年后，可以享受带薪年假。\n\n年假天数",
+                "source": "company_policy.txt",
+                "rrf_score": 0.03225806451612903,
+                "dense_rank": 2,
+                "bm25_rank": 2,
+                "dense_distance": 0.6660892963409424,
+                "bm25_score": 1.126642040727609,
+                "retrieval_type": "hybrid",
+                "filter_reason": "dense_semantic_match"
+            },
+            {
+                "chunk_id": 3,
+                "text": "二章 请假制度\n\n1. 病假\n\n员工因身体原因无法工作，可以申请病假。\n\n申请病假需要提交相关证明，并提前通知直属主管。\n\n\n2. 事假\n\n员工因个人事务需要请假，应提前提交申请。\n\n请假时间超过三天",
+                "source": "company_policy.txt",
+                "rrf_score": 0.015873015873015872,
+                "dense_rank": 3,
+                "bm25_rank": null,
+                "dense_distance": 0.7768512964248657,
+                "bm25_score": null,
+                "retrieval_type": "hybrid",
+                "filter_reason": "dense_semantic_match"
+            }
+        ],
+        "context": "[参考资料 1]\n来源：company_policy.txt\n内容：，需要经过部门负责人审批。\n\n\n第三章 年假制度\n\n员工入职满一年后，可以享受带薪年假。\n\n年假天数根据员工工作年限计算。\n\n员工需要提前提交年假申请。\n\n\n第四章 报销制度\n\n员工因工作产生的费用，\n\n[参考资料 2]\n来源：company_policy.txt\n内容：并提前通知直属主管。\n\n\n2. 事假\n\n员工因个人事务需要请假，应提前提交申请。\n\n请假时间超过三天，需要经过部门负责人审批。\n\n\n第三章 年假制度\n\n员工入职满一年后，可以享受带薪年假。\n\n年假天数\n\n[参考资料 3]\n来源：company_policy.txt\n内容：二章 请假制度\n\n1. 病假\n\n员工因身体原因无法工作，可以申请病假。\n\n申请病假需要提交相关证明，并提前通知直属主管。\n\n\n2. 事假\n\n员工因个人事务需要请假，应提前提交申请。\n\n请假时间超过三天",
+        "prompt": "你是一个企业内部知识库助手。\n\n请严格依据参考资料回答用户问题。\n\n规则：\n1. 只能根据参考资料回答。\n2. 不得编造资料中不存在的信息。\n3. 不得根据常识补充具体数字、日期或制度。\n4. 忽略与用户问题无关的参考资料。\n5. 回答简洁、准确。\n6. 不需要在正文中重复完整参考资料。\n\n参考资料：\n\n[参考资料 1]\n来源：company_policy.txt\n内容：，需要经过部门负责人审批。\n\n\n第三章 年假制度\n\n员工入职满一年后，可以享受带薪年假。\n\n年假天数根据员工工作年限计算。\n\n员工需要提前提交年假申请。\n\n\n第四章 报销制度\n\n员工因工作产生的费用，\n\n[参考资料 2]\n来源：company_policy.txt\n内容：并提前通知直属主管。\n\n\n2. 事假\n\n员工因个人事务需要请假，应提前提交申请。\n\n请假时间超过三天，需要经过部门负责人审批。\n\n\n第三章 年假制度\n\n员工入职满一年后，可以享受带薪年假。\n\n年假天数\n\n[参考资料 3]\n来源：company_policy.txt\n内容：二章 请假制度\n\n1. 病假\n\n员工因身体原因无法工作，可以申请病假。\n\n申请病假需要提交相关证明，并提前通知直属主管。\n\n\n2. 事假\n\n员工因个人事务需要请假，应提前提交申请。\n\n请假时间超过三天\n\n用户问题：\n\n工作满一年之后能休假吗？\n\n请给出回答：",
+        "answer": "可以。根据年假制度，员工入职满一年后，可以享受带薪年假。",
+        "sources": [
+            "company_policy.txt"
+        ]
+    },
+    {
+        "question": "公司有没有健身房补贴？",
+        "dense_results": [
+            {
+                "chunk_id": 6,
+                "distance": 1.0984368324279785,
+                "text": "根据员工工作年限计算。\n\n员工需要提前提交年假申请。\n\n\n第四章 报销制度\n\n员工因工作产生的费用，可以申请报销。\n\n报销需要提交：\n\n1. 发票\n2. 报销申请单\n3. 相关证明材料\n\n财务部门审核",
+                "source": "company_policy.txt"
+            },
+            {
+                "chunk_id": 7,
+                "distance": 1.1261640787124634,
+                "text": "可以申请报销。\n\n报销需要提交：\n\n1. 发票\n2. 报销申请单\n3. 相关证明材料\n\n财务部门审核通过后进行报销。\n\n\n第五章 离职制度\n\n员工离职需要提前提交离职申请。\n\n普通员工需要提前30天通",
+                "source": "company_policy.txt"
+            },
+            {
+                "chunk_id": 8,
+                "distance": 1.1910316944122314,
+                "text": "通过后进行报销。\n\n\n第五章 离职制度\n\n员工离职需要提前提交离职申请。\n\n普通员工需要提前30天通知公司。\n\n离职流程完成后，公司进行工资结算。",
+                "source": "company_policy.txt"
+            },
+            {
+                "chunk_id": 9,
+                "distance": 1.1986479759216309,
+                "text": "知公司。\n\n离职流程完成后，公司进行工资结算。",
+                "source": "company_policy.txt"
+            },
+            {
+                "chunk_id": 2,
+                "distance": 1.2096507549285889,
+                "text": "。\n如果员工迟到或者早退，需要及时向直属主管说明原因。\n\n连续多次迟到可能影响员工绩效考核。\n\n\n第二章 请假制度\n\n1. 病假\n\n员工因身体原因无法工作，可以申请病假。\n\n申请病假需要提交相关证明，",
+                "source": "company_policy.txt"
+            }
+        ],
+        "bm25_results": [
+            {
+                "chunk_id": 9,
+                "bm25_score": 0.6767843727956816,
+                "text": "知公司。\n\n离职流程完成后，公司进行工资结算。",
+                "source": "company_policy.txt",
+                "retrieval_type": "bm25"
+            },
+            {
+                "chunk_id": 0,
+                "bm25_score": 0.601629227422155,
+                "text": "企业员工管理制度\n\n第一章 公司基本制度\n\n1. 工作时间\n\n公司采用标准工作制度。\n员工工作时间为周一至周五，每天8小时。\n员工需要按照公司规定完成考勤。\n\n\n2. 考勤管理\n\n员工每天需要进行签到",
+                "source": "company_policy.txt",
+                "retrieval_type": "bm25"
+            },
+            {
+                "chunk_id": 8,
+                "bm25_score": 0.5624953748879047,
+                "text": "通过后进行报销。\n\n\n第五章 离职制度\n\n员工离职需要提前提交离职申请。\n\n普通员工需要提前30天通知公司。\n\n离职流程完成后，公司进行工资结算。",
+                "source": "company_policy.txt",
+                "retrieval_type": "bm25"
+            },
+            {
+                "chunk_id": 1,
+                "bm25_score": 0.3452208946997933,
+                "text": "周一至周五，每天8小时。\n员工需要按照公司规定完成考勤。\n\n\n2. 考勤管理\n\n员工每天需要进行签到。\n如果员工迟到或者早退，需要及时向直属主管说明原因。\n\n连续多次迟到可能影响员工绩效考核。\n\n\n第",
+                "source": "company_policy.txt",
+                "retrieval_type": "bm25"
+            },
+            {
+                "chunk_id": 7,
+                "bm25_score": 0.0,
+                "text": "可以申请报销。\n\n报销需要提交：\n\n1. 发票\n2. 报销申请单\n3. 相关证明材料\n\n财务部门审核通过后进行报销。\n\n\n第五章 离职制度\n\n员工离职需要提前提交离职申请。\n\n普通员工需要提前30天通",
+                "source": "company_policy.txt",
+                "retrieval_type": "bm25"
+            }
+        ],
+        "hybrid_results": [
+            {
+                "chunk_id": 9,
+                "text": "知公司。\n\n离职流程完成后，公司进行工资结算。",
+                "source": "company_policy.txt",
+                "rrf_score": 0.032018442622950824,
+                "dense_rank": 4,
+                "bm25_rank": 1,
+                "dense_distance": 1.1986479759216309,
+                "bm25_score": 0.6767843727956816,
+                "retrieval_type": "hybrid"
+            },
+            {
+                "chunk_id": 8,
+                "text": "通过后进行报销。\n\n\n第五章 离职制度\n\n员工离职需要提前提交离职申请。\n\n普通员工需要提前30天通知公司。\n\n离职流程完成后，公司进行工资结算。",
+                "source": "company_policy.txt",
+                "rrf_score": 0.031746031746031744,
+                "dense_rank": 3,
+                "bm25_rank": 3,
+                "dense_distance": 1.1910316944122314,
+                "bm25_score": 0.5624953748879047,
+                "retrieval_type": "hybrid"
+            },
+            {
+                "chunk_id": 7,
+                "text": "可以申请报销。\n\n报销需要提交：\n\n1. 发票\n2. 报销申请单\n3. 相关证明材料\n\n财务部门审核通过后进行报销。\n\n\n第五章 离职制度\n\n员工离职需要提前提交离职申请。\n\n普通员工需要提前30天通",
+                "source": "company_policy.txt",
+                "rrf_score": 0.0315136476426799,
+                "dense_rank": 2,
+                "bm25_rank": 5,
+                "dense_distance": 1.1261640787124634,
+                "bm25_score": 0.0,
+                "retrieval_type": "hybrid"
+            },
+            {
+                "chunk_id": 6,
+                "text": "根据员工工作年限计算。\n\n员工需要提前提交年假申请。\n\n\n第四章 报销制度\n\n员工因工作产生的费用，可以申请报销。\n\n报销需要提交：\n\n1. 发票\n2. 报销申请单\n3. 相关证明材料\n\n财务部门审核",
+                "source": "company_policy.txt",
+                "rrf_score": 0.01639344262295082,
+                "dense_rank": 1,
+                "bm25_rank": null,
+                "dense_distance": 1.0984368324279785,
+                "bm25_score": null,
+                "retrieval_type": "hybrid"
+            },
+            {
+                "chunk_id": 0,
+                "text": "企业员工管理制度\n\n第一章 公司基本制度\n\n1. 工作时间\n\n公司采用标准工作制度。\n员工工作时间为周一至周五，每天8小时。\n员工需要按照公司规定完成考勤。\n\n\n2. 考勤管理\n\n员工每天需要进行签到",
+                "source": "company_policy.txt",
+                "rrf_score": 0.016129032258064516,
+                "dense_rank": null,
+                "bm25_rank": 2,
+                "dense_distance": null,
+                "bm25_score": 0.601629227422155,
+                "retrieval_type": "hybrid"
+            }
+        ],
+        "filtered_results": [],
+        "context": "",
+        "prompt": "",
+        "answer": "根据当前企业知识库，没有检索到足够相关的资料，暂时无法回答该问题。",
+        "sources": []
+    }
+]
