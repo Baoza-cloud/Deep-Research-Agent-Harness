@@ -1,0 +1,11 @@
+{
+    "total_samples": 7,
+    "correct_count": 7,
+    "fallback_accuracy": 1.0,
+    "confusion_matrix": {
+        "true_positive": 3,
+        "true_negative": 4,
+        "false_positive": 0,
+        "false_negative": 0
+    }
+}
