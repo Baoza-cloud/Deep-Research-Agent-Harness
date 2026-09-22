@@ -1,0 +1,47 @@
+{
+  "name": "ResearchBench-Adversarial",
+  "version": "0.1.0",
+  "track": "adversarial",
+  "created_at": "2026-09-16T00:00:00Z",
+  "parent_dataset": "researchbench_frozen_v1.0.json",
+  "parent_dataset_sha256": "0eb1c0bda1e7a27869bdf053a9059cad0f87eacf549b08e7526d9d8f723884b2",
+  "expected_case_count": 35,
+  "expected_faults_per_case": 4,
+  "expected_fault_count": 140,
+  "generation": "deterministic_from_parent",
+  "faults": [
+    {
+      "type": "unknown_citation",
+      "gold_signal": "ghost-E99",
+      "expected_rule_issue": "rule-unknown-citations"
+    },
+    {
+      "type": "uncited_claim",
+      "gold_signal": "three injected uncited claims",
+      "expected_rule_issue": "rule-citation-coverage"
+    },
+    {
+      "type": "unsupported_claim",
+      "gold_signal": "sample.forbidden_terms[0] with a misleading valid citation",
+      "expected_detector": "semantic_red"
+    },
+    {
+      "type": "missing_limitation",
+      "gold_signal": "removed limitation section",
+      "expected_rule_issue": "rule-uncertainty"
+    }
+  ],
+  "metrics": [
+    "red_detection_recall",
+    "fault_repair_rate",
+    "clean_fact_retention_rate",
+    "collateral_damage_rate",
+    "rule_factual_accuracy",
+    "rule_hallucination_rate",
+    "citation_validity",
+    "citation_coverage",
+    "citation_preservation_rate",
+    "patch_acceptance_rate",
+    "rollback_correctness"
+  ]
+}

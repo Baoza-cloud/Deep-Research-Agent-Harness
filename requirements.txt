@@ -1,1 +1,3 @@
 # Python dependencies
+tavily-python
+openai>=1.40,<2

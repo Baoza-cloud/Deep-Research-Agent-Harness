@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "enterprise-deep-research"
+version = "1.0.0"
+description = "Harness-based multi-agent deep research engine with retrieval, memory, adversarial repair, and evaluation."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "openai>=1.40,<2",
+    "tavily-python",
+]
+
+[project.optional-dependencies]
+local-rag = [
+    "faiss-cpu",
+    "jieba",
+    "numpy",
+    "rank-bm25",
+    "sentence-transformers",
+]
+
+[project.scripts]
+deep-research = "research_engine.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+py-modules = [
+    "bm25_retrieval",
+    "context_builder",
+    "document_loader",
+    "embedding_model",
+    "hybrid_retrieval",
+    "llm_client",
+    "prompt_builder",
+    "rag_pipeline",
+    "relevance_filter",
+    "retrieval",
+    "retrieval_worker",
+    "source_builder",
+    "text_splitter",
+    "vector_store",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["research_engine*"]

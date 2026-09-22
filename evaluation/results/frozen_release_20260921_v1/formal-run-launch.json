@@ -1,0 +1,57 @@
+{
+  "freeze_id": "research-engine-20260921-v1",
+  "launched_at": "2026-09-21T14:42:00+08:00",
+  "status_at_write": "complete",
+  "output_directory": "results/formal_frozen_v1_35x3",
+  "expected_online_runs": 210,
+  "questions": 35,
+  "repeats": 3,
+  "variants": ["fixed_harness", "dynamic_swarm"],
+  "dataset": "datasets/researchbench_frozen_v1.0.json",
+  "dataset_sha256": "0eb1c0bda1e7a27869bdf053a9059cad0f87eacf549b08e7526d9d8f723884b2",
+  "provider": "deepseek",
+  "model": "deepseek-v4-flash",
+  "experiment_concurrency": 1,
+  "resume_attempt": {
+    "recorded_at": "2026-09-22T20:55:36+08:00",
+    "source_result": "results/formal_frozen_v1_35x3/ablation-20260921T235306610634Z.json",
+    "source_successful_rows": 67,
+    "source_failed_rows": 143,
+    "failure_breakdown": {
+      "APIConnectionError": 142,
+      "APITimeoutError": 1
+    },
+    "expected_reused_rows": 67,
+    "expected_rerun_rows": 143,
+    "status_at_write": "complete"
+  },
+  "completed_at": "2026-09-22T21:53:26+08:00",
+  "final_result": {
+    "run_id": "ablation-20260922T135223799454Z",
+    "path": "results/formal_frozen_v1_35x3/ablation-20260922T135223799454Z.json",
+    "sha256": "db09f4785d2ddbfc57b4a62dc29bb5008c6e5df475c33e3bb09ec0c3325b9d5a",
+    "successful_runs": 210,
+    "failed_runs": 0,
+    "targeted_rerun": "fixed_harness/frozen_k8s_hpa_001#r3"
+  },
+  "quality_gate": {
+    "passed": true,
+    "error_count": 0,
+    "warning_count": 0,
+    "minimum_citation_coverage": 1.0,
+    "minimum_claim_support_rate": 1.0,
+    "blocking_review_issues": 0,
+    "claim_conflicts": 0,
+    "severe_red_issues": 0,
+    "cost_quality_overrides": 0,
+    "json": "results/formal_frozen_v1_35x3/ablation-20260922T135223799454Z-quality-gate.json",
+    "json_sha256": "60888cc5268a28a02acb8659781e81fb7d4db32bcae732c2a2ccb19002f3ee72",
+    "markdown": "results/formal_frozen_v1_35x3/ablation-20260922T135223799454Z-quality-gate.md",
+    "markdown_sha256": "6eef5588b316527c58863f82f058463884a1dc35bf677c3a363a915baa9c0950"
+  },
+  "summary": {
+    "path": "results/formal_frozen_v1_35x3/ablation-20260922T135223799454Z-summary.md",
+    "sha256": "48c1cd9e5577592646f084818d0d5967d78ce5626a2ceb1cc97297b81fa8a951"
+  },
+  "note": "Formal 35-question x 3-repeat paired run completed and passed the strict completeness and quality gate."
+}

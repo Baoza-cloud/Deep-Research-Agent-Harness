@@ -1,0 +1,29 @@
+[
+  {
+    "id": "web_sdk_001",
+    "domain": "software_documentation",
+    "question": "Tavily Python SDK 是否提供异步客户端，搜索结果包含哪些核心字段？",
+    "as_of_date": "2026-09-14",
+    "required_domains": ["docs.tavily.com"],
+    "required_terms": ["AsyncTavilyClient", "content", "url"],
+    "min_results": 2
+  },
+  {
+    "id": "web_academic_001",
+    "domain": "academic_search",
+    "question": "OpenAlex 提供什么类型的学术研究元数据和 API 能力？",
+    "as_of_date": "2026-09-14",
+    "required_domains": ["openalex.org"],
+    "required_terms": ["works", "API"],
+    "min_results": 2
+  },
+  {
+    "id": "web_python_001",
+    "domain": "programming",
+    "question": "Python asyncio.Semaphore 如何限制异步任务并发数？",
+    "as_of_date": "2026-09-14",
+    "required_domains": ["docs.python.org"],
+    "required_terms": ["Semaphore", "asyncio"],
+    "min_results": 2
+  }
+]

@@ -1,0 +1,306 @@
+{
+  "name": "ResearchBench-Frozen",
+  "version": "1.0.0",
+  "track": "frozen",
+  "created_at": "2026-09-15T00:00:00Z",
+  "description": "覆盖 11 个领域、35 道题的正式冻结评测集；用于可复现回归、四组消融和题目级配对统计。",
+  "expected_domain_count": 11,
+  "expected_sample_count": 35,
+  "samples": [
+    {
+      "id": "frozen_asyncio_001",
+      "domain": "software_engineering",
+      "question": "asyncio.Semaphore 如何限制异步任务并发，使用时有什么边界？",
+      "evidence": [
+        {
+          "evidence_id": "facts-E1",
+          "subtask_id": "facts",
+          "content": "asyncio.Semaphore 管理一个内部计数器。每次 acquire() 会在计数器大于零时将其减一；计数器为零时协程等待。release() 会将计数器加一。async with semaphore 可用于配对 acquire 和 release。Semaphore 本身不保证线程安全。",
+          "source": "https://docs.python.org/3/library/asyncio-sync.html#asyncio.Semaphore",
+          "url": "https://docs.python.org/3/library/asyncio-sync.html#asyncio.Semaphore",
+          "title": "Python asyncio synchronization primitives",
+          "source_type": "official_documentation"
+        }
+      ],
+      "key_facts": [
+        {"fact_id": "F1", "required_terms": ["内部计数器", "acquire", "减一"], "minimum_hits": 2},
+        {"fact_id": "F2", "required_terms": ["release", "加一"], "minimum_hits": 2},
+        {"fact_id": "F3", "required_terms": ["不保证线程安全"], "minimum_hits": 1}
+      ],
+      "forbidden_terms": ["保证公平调度", "跨进程信号量"]
+    },
+    {
+      "id": "frozen_rrf_001",
+      "domain": "information_retrieval",
+      "question": "Reciprocal Rank Fusion 的核心公式、优点和局限是什么？",
+      "evidence": [
+        {
+          "evidence_id": "facts-E1",
+          "subtask_id": "facts",
+          "content": "Reciprocal Rank Fusion 将多个排序列表合并。文档 d 的融合分数是各排序列表中 1/(k + rank(d)) 的总和。它不要求不同检索器的原始分数处于同一尺度，但参数 k 和输入排名质量会影响最终结果。",
+          "source": "frozen://rrf/reference",
+          "title": "Reciprocal Rank Fusion frozen reference",
+          "source_type": "frozen_reference"
+        }
+      ],
+      "key_facts": [
+        {"fact_id": "F1", "required_terms": ["1/(k + rank", "总和"], "minimum_hits": 2},
+        {"fact_id": "F2", "required_terms": ["不要求", "原始分数", "同一尺度"], "minimum_hits": 2},
+        {"fact_id": "F3", "required_terms": ["输入排名质量", "影响"], "minimum_hits": 2}
+      ],
+      "forbidden_terms": ["自动学习权重", "保证最优排序"]
+    },
+    {
+      "id": "frozen_http_001",
+      "domain": "distributed_systems",
+      "question": "HTTP 429 响应应如何处理，为什么需要退避？",
+      "evidence": [
+        {
+          "evidence_id": "facts-E1",
+          "subtask_id": "facts",
+          "content": "HTTP 429 Too Many Requests 表示客户端在一定时间内发送了过多请求。响应可以包含 Retry-After 字段，用于指示客户端在再次请求前应等待多久。客户端还可以采用带抖动的指数退避，减少多个客户端同步重试造成的请求峰值。",
+          "source": "https://www.rfc-editor.org/rfc/rfc6585#section-4",
+          "url": "https://www.rfc-editor.org/rfc/rfc6585#section-4",
+          "title": "RFC 6585 Section 4",
+          "source_type": "standard"
+        }
+      ],
+      "key_facts": [
+        {"fact_id": "F1", "required_terms": ["429", "过多请求"], "minimum_hits": 2},
+        {"fact_id": "F2", "required_terms": ["Retry-After", "等待"], "minimum_hits": 2},
+        {"fact_id": "F3", "required_terms": ["指数退避", "抖动", "请求峰值"], "minimum_hits": 2}
+      ],
+      "forbidden_terms": ["必须永久停止请求", "429 表示服务器内部错误"]
+    },
+    {
+      "id": "frozen_sqlite_001",
+      "domain": "database",
+      "question": "SQLite WAL 模式如何影响读写并发，有哪些限制？",
+      "evidence": [
+        {
+          "evidence_id": "facts-E1",
+          "subtask_id": "facts",
+          "content": "在 SQLite WAL 模式中，修改写入独立的 write-ahead log，读取者可以继续读取原数据库快照，因此读取和写入可以同时进行。SQLite 仍然同一时间只允许一个写入者。WAL 需要 checkpoint 将日志内容转移回数据库文件。",
+          "source": "https://sqlite.org/wal.html",
+          "url": "https://sqlite.org/wal.html",
+          "title": "SQLite Write-Ahead Logging",
+          "source_type": "official_documentation"
+        }
+      ],
+      "key_facts": [
+        {"fact_id": "F1", "required_terms": ["读取", "写入", "同时进行"], "minimum_hits": 3},
+        {"fact_id": "F2", "required_terms": ["一个写入者"], "minimum_hits": 1},
+        {"fact_id": "F3", "required_terms": ["checkpoint", "数据库文件"], "minimum_hits": 2}
+      ],
+      "forbidden_terms": ["允许无限并发写入", "不再需要 checkpoint"]
+    },
+    {
+      "id": "frozen_openalex_001",
+      "domain": "academic_search",
+      "question": "OpenAlex Works 数据可以用于哪些学术检索任务，使用元数据时应注意什么？",
+      "evidence": [
+        {
+          "evidence_id": "facts-E1",
+          "subtask_id": "facts",
+          "content": "OpenAlex 的 Works 实体表示论文、书籍、数据集和学位论文等学术产出。Works 记录可以包含题目、DOI、作者关系、来源、出版日期、主题和被引次数。元数据覆盖度会因作品和来源而不同，被引次数也会随数据更新而变化。",
+          "source": "https://docs.openalex.org/api-entities/works",
+          "url": "https://docs.openalex.org/api-entities/works",
+          "title": "OpenAlex Works Overview",
+          "source_type": "official_documentation"
+        }
+      ],
+      "key_facts": [
+        {"fact_id": "F1", "required_terms": ["Works", "学术产出"], "minimum_hits": 2},
+        {"fact_id": "F2", "required_terms": ["DOI", "作者", "被引次数"], "minimum_hits": 2},
+        {"fact_id": "F3", "required_terms": ["覆盖度", "不同", "更新"], "minimum_hits": 2}
+      ],
+      "forbidden_terms": ["保证所有作品都有 DOI", "被引次数永不变化"]
+    },
+    {
+      "id": "frozen_security_001",
+      "domain": "ai_security",
+      "question": "RAG 系统为什么需要防御检索内容中的 Prompt Injection？",
+      "evidence": [
+        {
+          "evidence_id": "facts-E1",
+          "subtask_id": "facts",
+          "content": "RAG 检索到的网页和文档属于外部不可信数据。攻击者可能在文档中嵌入要求模型忽略系统规则、泄露秘密或调用工具的指令。系统应分隔指令与数据、限制工具权限、检测可疑内容，并记录安全事件供审计。",
+          "source": "frozen://security/prompt-injection",
+          "title": "Prompt injection frozen security reference",
+          "source_type": "frozen_reference"
+        }
+      ],
+      "key_facts": [
+        {"fact_id": "F1", "required_terms": ["外部", "不可信数据"], "minimum_hits": 2},
+        {"fact_id": "F2", "required_terms": ["忽略系统规则", "泄露", "调用工具"], "minimum_hits": 2},
+        {"fact_id": "F3", "required_terms": ["分隔指令与数据", "限制工具权限", "审计"], "minimum_hits": 2}
+      ],
+      "forbidden_terms": ["网页内容可以覆盖系统指令", "只靠提示词即可完全防御"]
+    },
+    {
+      "id": "frozen_taskgroup_001", "domain": "software_engineering",
+      "question": "asyncio.TaskGroup 如何提供结构化并发，子任务失败时如何处理？",
+      "evidence": [{"evidence_id":"facts-E1","subtask_id":"facts","content":"asyncio.TaskGroup 是异步上下文管理器，会等待组内所有任务完成。若某个任务首次发生 CancelledError 以外的异常，其余任务会被取消；退出上下文后，非取消异常会组合为 ExceptionGroup 或 BaseExceptionGroup 抛出。","source":"https://docs.python.org/3/library/asyncio-task.html#task-groups","url":"https://docs.python.org/3/library/asyncio-task.html#task-groups","title":"Python asyncio Task Groups","source_type":"official_documentation"}],
+      "key_facts": [{"fact_id":"F1","required_terms":["异步上下文管理器","等待","所有任务"],"minimum_hits":2},{"fact_id":"F2","required_terms":["异常","其余任务","取消"],"minimum_hits":3},{"fact_id":"F3","required_terms":["ExceptionGroup","组合"],"minimum_hits":2}],
+      "forbidden_terms": ["失败任务不会影响其他任务","保证任务按创建顺序完成"]
+    },
+    {
+      "id": "frozen_git_objects_001", "domain": "software_engineering",
+      "question": "Git 的 object database、refs、HEAD 和 index 分别承担什么职责？",
+      "evidence": [{"evidence_id":"facts-E1","subtask_id":"facts","content":"Git 在 .git/objects 中保存内容寻址的对象数据库；refs 是指向提交对象的可读名称；HEAD 通常指向当前分支；index 保存暂存区信息，用于准备下一次提交的树。","source":"https://git-scm.com/book/en/v2/Git-Internals-Plumbing-and-Porcelain","url":"https://git-scm.com/book/en/v2/Git-Internals-Plumbing-and-Porcelain","title":"Pro Git: Git Internals","source_type":"official_documentation"}],
+      "key_facts": [{"fact_id":"F1","required_terms":[".git/objects","对象数据库"],"minimum_hits":2},{"fact_id":"F2","required_terms":["refs","提交"],"minimum_hits":2},{"fact_id":"F3","required_terms":["HEAD","当前分支","index","暂存区"],"minimum_hits":3}],
+      "forbidden_terms": ["HEAD 永远直接存储提交内容","index 是远程仓库"]
+    },
+    {
+      "id": "frozen_contextvars_001", "domain": "software_engineering",
+      "question": "Python contextvars 为什么适合隔离异步任务上下文，使用时应注意什么？",
+      "evidence": [{"evidence_id":"facts-E1","subtask_id":"facts","content":"contextvars 为上下文局部状态提供 ContextVar，asyncio 原生支持在任务中传播上下文。ContextVar 应在模块顶层创建；Context 对象维护变量值映射，同一 Context 不能同时进入多个线程。","source":"https://docs.python.org/3/library/contextvars.html","url":"https://docs.python.org/3/library/contextvars.html","title":"Python contextvars","source_type":"official_documentation"}],
+      "key_facts": [{"fact_id":"F1","required_terms":["ContextVar","上下文局部"],"minimum_hits":2},{"fact_id":"F2","required_terms":["asyncio","传播上下文"],"minimum_hits":2},{"fact_id":"F3","required_terms":["模块顶层","创建"],"minimum_hits":2}],
+      "forbidden_terms": ["所有协程共享同一个可变值","可以替代所有线程锁"]
+    },
+    {
+      "id": "frozen_bm25_001", "domain": "information_retrieval",
+      "question": "BM25 如何处理词频与文档长度，k1 和 b 起什么作用？",
+      "evidence": [{"evidence_id":"facts-E1","subtask_id":"facts","content":"BM25 使用逆文档频率提高稀有查询词权重，并让词频贡献随出现次数增加而趋于饱和。k1 控制词频饱和速度，b 控制基于平均文档长度的长度归一化强度。","source":"https://www.staff.city.ac.uk/~sbrp622/papers/foundations_bm25_review.pdf","url":"https://www.staff.city.ac.uk/~sbrp622/papers/foundations_bm25_review.pdf","title":"The Probabilistic Relevance Framework: BM25 and Beyond","source_type":"research_paper"}],
+      "key_facts": [{"fact_id":"F1","required_terms":["逆文档频率","稀有"],"minimum_hits":2},{"fact_id":"F2","required_terms":["词频","饱和"],"minimum_hits":2},{"fact_id":"F3","required_terms":["k1","饱和","b","长度归一化"],"minimum_hits":4}],
+      "forbidden_terms": ["词频贡献无限线性增长","完全忽略文档长度"]
+    },
+    {
+      "id": "frozen_cosine_001", "domain": "information_retrieval",
+      "question": "余弦相似度如何比较向量，作为语义检索分数有哪些边界？",
+      "evidence": [{"evidence_id":"facts-E1","subtask_id":"facts","content":"余弦相似度是两个向量点积除以各自 L2 范数乘积，即归一化点积；对已 L2 归一化的数据，它等价于线性核。它主要比较方向而非向量模长，效果依赖嵌入空间是否把语义关系编码为方向接近。","source":"https://scikit-learn.org/stable/modules/generated/sklearn.metrics.pairwise.cosine_similarity.html","url":"https://scikit-learn.org/stable/modules/generated/sklearn.metrics.pairwise.cosine_similarity.html","title":"scikit-learn cosine_similarity","source_type":"official_documentation"}],
+      "key_facts": [{"fact_id":"F1","required_terms":["点积","L2 范数","归一化"],"minimum_hits":2},{"fact_id":"F2","required_terms":["方向","模长"],"minimum_hits":2},{"fact_id":"F3","required_terms":["嵌入空间","语义"],"minimum_hits":2}],
+      "forbidden_terms": ["余弦相似度直接证明事实正确","始终优于关键词检索"]
+    },
+    {
+      "id": "frozen_http_idempotency_001", "domain": "distributed_systems",
+      "question": "HTTP 方法的幂等性意味着什么，重试 PUT 时仍需防范哪些问题？",
+      "evidence": [{"evidence_id":"facts-E1","subtask_id":"facts","content":"RFC 9110 将幂等方法定义为：一次请求与多次相同请求对服务器预期产生相同效果。PUT、DELETE 和安全方法是幂等的；客户端可在通信失败时自动重试幂等请求，但日志、计费等非幂等副作用仍可能每次发生。","source":"https://www.rfc-editor.org/rfc/rfc9110.html#name-idempotent-methods","url":"https://www.rfc-editor.org/rfc/rfc9110.html#name-idempotent-methods","title":"RFC 9110 Idempotent Methods","source_type":"standard"}],
+      "key_facts": [{"fact_id":"F1","required_terms":["一次","多次","相同效果"],"minimum_hits":3},{"fact_id":"F2","required_terms":["PUT","DELETE","幂等"],"minimum_hits":3},{"fact_id":"F3","required_terms":["重试","副作用"],"minimum_hits":2}],
+      "forbidden_terms": ["幂等意味着响应字节完全相同","POST 天生总是幂等"]
+    },
+    {
+      "id": "frozen_raft_001", "domain": "distributed_systems",
+      "question": "Raft 如何通过领导者、日志复制和多数派维持一致性？",
+      "evidence": [{"evidence_id":"facts-E1","subtask_id":"facts","content":"Raft 将共识拆分为领导者选举、日志复制和安全性。领导者接收客户端命令并复制日志；一个日志条目在被当前任期的领导者复制到多数服务器后可以提交。选举限制帮助保证新领导者包含已提交条目。","source":"https://raft.github.io/raft.pdf","url":"https://raft.github.io/raft.pdf","title":"In Search of an Understandable Consensus Algorithm","source_type":"research_paper"}],
+      "key_facts": [{"fact_id":"F1","required_terms":["领导者选举","日志复制","安全性"],"minimum_hits":3},{"fact_id":"F2","required_terms":["领导者","客户端","复制日志"],"minimum_hits":3},{"fact_id":"F3","required_terms":["多数","提交"],"minimum_hits":2}],
+      "forbidden_terms": ["只要一台服务器写入就提交","允许两个领导者永久同时提交冲突日志"]
+    },
+    {
+      "id": "frozen_postgres_mvcc_001", "domain": "database",
+      "question": "PostgreSQL MVCC 如何减少读写冲突，又带来哪些维护成本？",
+      "evidence": [{"evidence_id":"facts-E1","subtask_id":"facts","content":"PostgreSQL 使用多版本并发控制，让每条语句看到某个时间点的数据快照；读取通常不阻塞写入，写入也通常不阻塞读取。更新会产生新的行版本，失效版本需要 VACUUM 回收，否则会造成表膨胀。","source":"https://www.postgresql.org/docs/current/mvcc-intro.html","url":"https://www.postgresql.org/docs/current/mvcc-intro.html","title":"PostgreSQL MVCC Introduction","source_type":"official_documentation"}],
+      "key_facts": [{"fact_id":"F1","required_terms":["多版本并发控制","快照"],"minimum_hits":2},{"fact_id":"F2","required_terms":["读取","不阻塞","写入"],"minimum_hits":3},{"fact_id":"F3","required_terms":["VACUUM","回收","膨胀"],"minimum_hits":2}],
+      "forbidden_terms": ["MVCC 消除所有写写冲突","不再需要 VACUUM"]
+    },
+    {
+      "id": "frozen_redis_persistence_001", "domain": "database",
+      "question": "Redis RDB 与 AOF 持久化的恢复与性能取舍是什么？",
+      "evidence": [{"evidence_id":"facts-E1","subtask_id":"facts","content":"RDB 按配置间隔生成数据集时间点快照，文件紧凑且重启恢复较快，但故障时可能丢失最近一次快照后的数据。AOF 记录服务器接收的写操作并在重启时重放，通常更耐久，但文件更大，性能取决于 fsync 策略；两者可以组合使用。","source":"https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/","url":"https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/","title":"Redis persistence","source_type":"official_documentation"}],
+      "key_facts": [{"fact_id":"F1","required_terms":["RDB","快照","丢失"],"minimum_hits":3},{"fact_id":"F2","required_terms":["AOF","写操作","重放"],"minimum_hits":3},{"fact_id":"F3","required_terms":["fsync","组合"],"minimum_hits":2}],
+      "forbidden_terms": ["RDB 保证零数据丢失","AOF 从不影响性能"]
+    },
+    {
+      "id": "frozen_crossref_001", "domain": "academic_search",
+      "question": "Crossref REST API 适合怎样的文献元数据检索，为什么结果仍需校验？",
+      "evidence": [{"evidence_id":"facts-E1","subtask_id":"facts","content":"Crossref REST API 可按 DOI 获取单条记录，也可查询 works、members、funders、prefixes 和 journals 等路由。返回元数据由成员及来源注册，字段完整性和准确性会有差异；礼貌池建议提供 mailto 身份，并应缓存和校验关键字段。","source":"https://www.crossref.org/documentation/retrieve-metadata/rest-api/","url":"https://www.crossref.org/documentation/retrieve-metadata/rest-api/","title":"Crossref REST API","source_type":"official_documentation"}],
+      "key_facts": [{"fact_id":"F1","required_terms":["DOI","works","元数据"],"minimum_hits":2},{"fact_id":"F2","required_terms":["完整性","准确性","差异"],"minimum_hits":2},{"fact_id":"F3","required_terms":["mailto","缓存","校验"],"minimum_hits":2}],
+      "forbidden_terms": ["保证所有字段完整准确","可以无限频率请求"]
+    },
+    {
+      "id":"frozen_arxiv_api_001","domain":"academic_search","question":"arXiv API 查询与分页时有哪些关键参数和使用边界？",
+      "evidence":[{"evidence_id":"facts-E1","subtask_id":"facts","content":"arXiv API 使用 Atom 格式返回结果，查询可通过 search_query 组合字段，并用 start 与 max_results 分页。排序可指定 submittedDate、lastUpdatedDate 或 relevance；客户端应控制请求频率，API 元数据不等同于同行评审结论。","source":"https://info.arxiv.org/help/api/user-manual.html","url":"https://info.arxiv.org/help/api/user-manual.html","title":"arXiv API User's Manual","source_type":"official_documentation"}],
+      "key_facts":[{"fact_id":"F1","required_terms":["Atom","search_query"],"minimum_hits":2},{"fact_id":"F2","required_terms":["start","max_results","分页"],"minimum_hits":3},{"fact_id":"F3","required_terms":["请求频率","同行评审"],"minimum_hits":2}],"forbidden_terms":["所有 arXiv 论文都已同行评审","max_results 没有上限"]
+    },
+    {
+      "id":"frozen_ai_least_privilege_001","domain":"ai_security","question":"具备工具调用能力的 Agent 为什么必须采用最小权限和人工审批？",
+      "evidence":[{"evidence_id":"facts-E1","subtask_id":"facts","content":"LLM Agent 的 excessive agency 风险来自过多功能、权限或自主性。缓解措施包括只授予完成任务所需的最小工具与权限、在下游系统中按用户授权执行、对高影响操作要求人工批准，并记录工具调用供审计。","source":"https://genai.owasp.org/llmrisk/llm062025-excessive-agency/","url":"https://genai.owasp.org/llmrisk/llm062025-excessive-agency/","title":"OWASP LLM06: Excessive Agency","source_type":"security_standard"}],
+      "key_facts":[{"fact_id":"F1","required_terms":["过多功能","权限","自主性"],"minimum_hits":2},{"fact_id":"F2","required_terms":["最小","工具","权限"],"minimum_hits":3},{"fact_id":"F3","required_terms":["人工批准","高影响","审计"],"minimum_hits":2}],"forbidden_terms":["Agent 应默认拥有管理员权限","模型确认即可替代用户授权"]
+    },
+    {
+      "id":"frozen_ai_output_validation_001","domain":"ai_security","question":"为什么模型输出在进入 SQL、Shell 或浏览器等下游组件前必须验证？",
+      "evidence":[{"evidence_id":"facts-E1","subtask_id":"facts","content":"Improper Output Handling 指下游系统未充分验证或编码模型输出。模型生成内容应视为不可信输入；应使用允许列表、结构化模式验证、上下文相关编码和参数化接口，并对执行型动作限制权限，避免 SQL 注入、命令执行或跨站脚本。","source":"https://genai.owasp.org/llmrisk/llm052025-improper-output-handling/","url":"https://genai.owasp.org/llmrisk/llm052025-improper-output-handling/","title":"OWASP LLM05: Improper Output Handling","source_type":"security_standard"}],
+      "key_facts":[{"fact_id":"F1","required_terms":["不可信输入","下游"],"minimum_hits":2},{"fact_id":"F2","required_terms":["允许列表","模式验证","参数化"],"minimum_hits":2},{"fact_id":"F3","required_terms":["SQL 注入","命令执行","跨站脚本"],"minimum_hits":2}],"forbidden_terms":["模型输出天然安全","字符串拼接 SQL 是推荐做法"]
+    },
+    {
+      "id":"frozen_transformer_001","domain":"machine_learning","question":"Transformer 为什么能并行建模序列，自注意力的核心计算是什么？",
+      "evidence":[{"evidence_id":"facts-E1","subtask_id":"facts","content":"Transformer 放弃循环和卷积，使用自注意力与前馈网络。缩放点积注意力计算 softmax(QK^T/√d_k)V；多头注意力在不同表示子空间并行计算，位置编码为模型提供序列位置信息。","source":"https://arxiv.org/abs/1706.03762","url":"https://arxiv.org/abs/1706.03762","title":"Attention Is All You Need","source_type":"research_paper"}],
+      "key_facts":[{"fact_id":"F1","required_terms":["自注意力","前馈网络"],"minimum_hits":2},{"fact_id":"F2","required_terms":["softmax","QK","V"],"minimum_hits":3},{"fact_id":"F3","required_terms":["多头","位置编码"],"minimum_hits":2}],"forbidden_terms":["Transformer 必须串行处理每个 token","不需要位置信息"]
+    },
+    {
+      "id":"frozen_lora_001","domain":"machine_learning","question":"LoRA 如何降低大模型微调成本，它没有改变哪些推理事实？",
+      "evidence":[{"evidence_id":"facts-E1","subtask_id":"facts","content":"LoRA 冻结预训练权重，在选定权重矩阵旁注入可训练的低秩分解更新。训练参数和优化器状态显著减少；更新矩阵可在部署时合并回原权重，因此不必增加额外推理延迟，但秩和目标模块会影响适配能力。","source":"https://arxiv.org/abs/2106.09685","url":"https://arxiv.org/abs/2106.09685","title":"LoRA: Low-Rank Adaptation of Large Language Models","source_type":"research_paper"}],
+      "key_facts":[{"fact_id":"F1","required_terms":["冻结","预训练权重","低秩"],"minimum_hits":3},{"fact_id":"F2","required_terms":["训练参数","减少"],"minimum_hits":2},{"fact_id":"F3","required_terms":["合并","推理延迟","秩"],"minimum_hits":2}],"forbidden_terms":["LoRA 必须更新全部参数","任何任务都保证无损效果"]
+    },
+    {
+      "id":"frozen_dropout_001","domain":"machine_learning","question":"Dropout 在训练与推理阶段分别做什么，为什么能缓解过拟合？",
+      "evidence":[{"evidence_id":"facts-E1","subtask_id":"facts","content":"Dropout 在训练时按概率随机丢弃神经单元及其连接，减少单元之间复杂的共适应，可近似组合多个变薄网络。推理时不再随机丢弃，并采用与训练约定一致的缩放来使用完整网络。","source":"https://jmlr.org/papers/v15/srivastava14a.html","url":"https://jmlr.org/papers/v15/srivastava14a.html","title":"Dropout: A Simple Way to Prevent Neural Networks from Overfitting","source_type":"research_paper"}],
+      "key_facts":[{"fact_id":"F1","required_terms":["训练","随机丢弃"],"minimum_hits":2},{"fact_id":"F2","required_terms":["共适应","过拟合"],"minimum_hits":2},{"fact_id":"F3","required_terms":["推理","完整网络","缩放"],"minimum_hits":2}],"forbidden_terms":["推理时仍必须随机丢弃","保证消除所有过拟合"]
+    },
+    {
+      "id":"frozen_calibration_001","domain":"machine_learning","question":"分类模型的概率校准是什么，ECE 与 temperature scaling 有何作用和限制？",
+      "evidence":[{"evidence_id":"facts-E1","subtask_id":"facts","content":"概率校准要求预测置信度与经验正确率相匹配。Expected Calibration Error 将预测按置信度分箱，汇总各箱准确率与置信度差异，因此结果依赖分箱方案。Temperature scaling 在验证集上学习一个标量温度缩放 logits，通常不改变类别排序，但不能保证所有分布漂移下仍校准。","source":"https://proceedings.mlr.press/v70/guo17a.html","url":"https://proceedings.mlr.press/v70/guo17a.html","title":"On Calibration of Modern Neural Networks","source_type":"research_paper"}],
+      "key_facts":[{"fact_id":"F1","required_terms":["置信度","正确率","匹配"],"minimum_hits":3},{"fact_id":"F2","required_terms":["ECE","分箱","差异"],"minimum_hits":3},{"fact_id":"F3","required_terms":["temperature","logits","分布漂移"],"minimum_hits":2}],"forbidden_terms":["ECE 与分箱无关","温度缩放保证域外校准"]
+    },
+    {
+      "id":"frozen_k8s_deployment_001","domain":"cloud_native","question":"Kubernetes Deployment 如何进行滚动更新和回滚？",
+      "evidence":[{"evidence_id":"facts-E1","subtask_id":"facts","content":"Deployment 声明式管理 ReplicaSet 和 Pod。RollingUpdate 通过 maxUnavailable 与 maxSurge 控制更新期间不可用和额外 Pod 数量；每次模板变更形成新的 revision，可查看 rollout 状态，并在历史 revision 可用时执行 rollback。","source":"https://kubernetes.io/docs/concepts/workloads/controllers/deployment/","url":"https://kubernetes.io/docs/concepts/workloads/controllers/deployment/","title":"Kubernetes Deployments","source_type":"official_documentation"}],
+      "key_facts":[{"fact_id":"F1","required_terms":["ReplicaSet","Pod","声明式"],"minimum_hits":2},{"fact_id":"F2","required_terms":["maxUnavailable","maxSurge"],"minimum_hits":2},{"fact_id":"F3","required_terms":["revision","rollout","rollback"],"minimum_hits":2}],"forbidden_terms":["滚动更新保证绝对零失败","Deployment 直接管理物理服务器"]
+    },
+    {
+      "id":"frozen_k8s_probes_001","domain":"cloud_native","question":"Kubernetes liveness、readiness 与 startup probe 应如何区分？",
+      "evidence":[{"evidence_id":"facts-E1","subtask_id":"facts","content":"liveness probe 失败会触发容器重启；readiness probe 失败会把 Pod 从匹配 Service 的端点中移除，而不必重启容器；startup probe 在成功前抑制 liveness 和 readiness 检查，适合启动缓慢的应用。","source":"https://kubernetes.io/docs/concepts/configuration/liveness-readiness-startup-probes/","url":"https://kubernetes.io/docs/concepts/configuration/liveness-readiness-startup-probes/","title":"Kubernetes Probes","source_type":"official_documentation"}],
+      "key_facts":[{"fact_id":"F1","required_terms":["liveness","重启"],"minimum_hits":2},{"fact_id":"F2","required_terms":["readiness","端点","移除"],"minimum_hits":3},{"fact_id":"F3","required_terms":["startup","抑制","启动缓慢"],"minimum_hits":2}],"forbidden_terms":["readiness 失败必然重启容器","三种探针完全等价"]
+    },
+    {
+      "id":"frozen_k8s_hpa_001","domain":"cloud_native","question":"Kubernetes HPA 如何扩缩容，为什么指标与资源请求配置很重要？",
+      "evidence":[{"evidence_id":"facts-E1","subtask_id":"facts","content":"HorizontalPodAutoscaler 周期性读取资源、自定义或外部指标，调整 Deployment 或 StatefulSet 等目标的期望副本数。资源利用率按当前使用量相对容器 resource requests 计算；缺失请求或指标会使部分扩缩计算无法进行，并通过容差与稳定窗口降低抖动。","source":"https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/","url":"https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/","title":"Kubernetes Horizontal Pod Autoscaling","source_type":"official_documentation"}],
+      "key_facts":[{"fact_id":"F1","required_terms":["指标","期望副本数"],"minimum_hits":2},{"fact_id":"F2","required_terms":["resource requests","利用率"],"minimum_hits":2},{"fact_id":"F3","required_terms":["稳定窗口","抖动"],"minimum_hits":2}],"forbidden_terms":["HPA 自动增加单个 Pod 的 CPU","无需任何指标"]
+    },
+    {
+      "id":"frozen_kafka_groups_001","domain":"data_engineering","question":"Kafka consumer group 如何分配分区，扩容消费者有哪些上限？",
+      "evidence":[{"evidence_id":"facts-E1","subtask_id":"facts","content":"同一 consumer group 内，一个主题分区在任一时刻只分配给一个消费者实例；不同组可独立消费同一数据。增加消费者可并行处理更多分区，但消费者数超过分区数时会有空闲实例；成员或分区变化会触发重新分配。","source":"https://kafka.apache.org/documentation/#consumerapi","url":"https://kafka.apache.org/documentation/#consumerapi","title":"Apache Kafka Consumer API","source_type":"official_documentation"}],
+      "key_facts":[{"fact_id":"F1","required_terms":["consumer group","分区","一个消费者"],"minimum_hits":3},{"fact_id":"F2","required_terms":["不同组","独立消费"],"minimum_hits":2},{"fact_id":"F3","required_terms":["超过分区数","空闲","重新分配"],"minimum_hits":2}],"forbidden_terms":["一个分区同时分配给组内所有消费者","消费者越多吞吐无限增长"]
+    },
+    {
+      "id":"frozen_spark_persistence_001","domain":"data_engineering","question":"Spark 的 persist/cache 与 checkpoint 有何区别？",
+      "evidence":[{"evidence_id":"facts-E1","subtask_id":"facts","content":"RDD persist/cache 将计算结果按存储级别保留，以便后续动作复用，但其 lineage 仍存在，丢失分区可重新计算。checkpoint 把 RDD 写入可靠存储并截断 lineage，适合过长依赖链或需要容错边界的场景；执行 checkpoint 前通常应先持久化以避免重复计算。","source":"https://spark.apache.org/docs/latest/rdd-programming-guide.html","url":"https://spark.apache.org/docs/latest/rdd-programming-guide.html","title":"Spark RDD Programming Guide","source_type":"official_documentation"}],
+      "key_facts":[{"fact_id":"F1","required_terms":["persist","存储级别","复用"],"minimum_hits":2},{"fact_id":"F2","required_terms":["checkpoint","可靠存储","截断 lineage"],"minimum_hits":3},{"fact_id":"F3","required_terms":["先持久化","重复计算"],"minimum_hits":2}],"forbidden_terms":["cache 永久截断 lineage","checkpoint 只保存在执行器内存"]
+    },
+    {
+      "id":"frozen_airflow_dag_001","domain":"data_engineering","question":"Airflow DAG 如何表达任务依赖，调度时间与任务执行时间为何不同？",
+      "evidence":[{"evidence_id":"facts-E1","subtask_id":"facts","content":"Airflow DAG 定义任务集合、依赖关系和调度，不保存任务内部处理的数据。Task Instance 是任务在特定逻辑日期的一次运行；调度器在数据区间结束后创建对应 DAG Run，因此逻辑日期通常不是实际开始执行的墙钟时间。","source":"https://airflow.apache.org/docs/apache-airflow/stable/core-concepts/dags.html","url":"https://airflow.apache.org/docs/apache-airflow/stable/core-concepts/dags.html","title":"Apache Airflow DAGs","source_type":"official_documentation"}],
+      "key_facts":[{"fact_id":"F1","required_terms":["DAG","任务","依赖关系","调度"],"minimum_hits":3},{"fact_id":"F2","required_terms":["Task Instance","逻辑日期"],"minimum_hits":2},{"fact_id":"F3","required_terms":["数据区间结束","墙钟时间"],"minimum_hits":2}],"forbidden_terms":["DAG 本身存储业务数据","逻辑日期永远等于实际启动时间"]
+    },
+    {
+      "id":"frozen_gdpr_principles_001","domain":"privacy_compliance","question":"GDPR 的目的限制与数据最小化原则如何约束数据处理？",
+      "evidence":[{"evidence_id":"facts-E1","subtask_id":"facts","content":"GDPR 第 5 条要求个人数据为特定、明确且合法目的收集，后续处理不得与这些目的不相容；数据应与目的相关，并限于实现目的所必需的范围。控制者还应能够证明遵守这些原则，即问责制。","source":"https://eur-lex.europa.eu/eli/reg/2016/679/oj","url":"https://eur-lex.europa.eu/eli/reg/2016/679/oj","title":"Regulation (EU) 2016/679 Article 5","source_type":"regulation"}],
+      "key_facts":[{"fact_id":"F1","required_terms":["特定","明确","合法目的"],"minimum_hits":3},{"fact_id":"F2","required_terms":["相关","必需","范围"],"minimum_hits":2},{"fact_id":"F3","required_terms":["证明","问责制"],"minimum_hits":2}],"forbidden_terms":["可以先收集一切数据再决定用途","匿名声明自动满足 GDPR"]
+    },
+    {
+      "id":"frozen_k_anonymity_001","domain":"privacy_compliance","question":"k-anonymity 能降低哪类重识别风险，又为何不能单独保证隐私？",
+      "evidence":[{"evidence_id":"facts-E1","subtask_id":"facts","content":"k-anonymity 要求每条记录在准标识符组合上至少与 k-1 条记录不可区分，以降低通过连接外部数据进行身份重识别的风险。它不直接保护同一等价类中敏感属性缺乏多样性的情况，也不能充分抵抗背景知识攻击。","source":"https://dataprivacylab.org/dataprivacy/projects/kanonymity/kanonymity.pdf","url":"https://dataprivacylab.org/dataprivacy/projects/kanonymity/kanonymity.pdf","title":"k-Anonymity: A Model for Protecting Privacy","source_type":"research_paper"}],
+      "key_facts":[{"fact_id":"F1","required_terms":["准标识符","k-1","不可区分"],"minimum_hits":3},{"fact_id":"F2","required_terms":["外部数据","重识别"],"minimum_hits":2},{"fact_id":"F3","required_terms":["敏感属性","多样性","背景知识"],"minimum_hits":2}],"forbidden_terms":["k-anonymity 保证绝对匿名","直接防止所有属性泄露"]
+    },
+    {
+      "id":"frozen_differential_privacy_001","domain":"privacy_compliance","question":"差分隐私中的 epsilon 表示什么，噪声规模与隐私效用如何权衡？",
+      "evidence":[{"evidence_id":"facts-E1","subtask_id":"facts","content":"差分隐私比较仅相差一条记录的相邻数据集，限制任意输出事件概率比的变化。epsilon 越小，允许的分布差异越小，隐私保证越强；拉普拉斯机制的噪声尺度与查询敏感度成正比、与 epsilon 成反比，因此更强隐私通常降低效用。","source":"https://www.microsoft.com/en-us/research/publication/calibrating-noise-to-sensitivity-in-private-data-analysis/","url":"https://www.microsoft.com/en-us/research/publication/calibrating-noise-to-sensitivity-in-private-data-analysis/","title":"Calibrating Noise to Sensitivity in Private Data Analysis","source_type":"research_paper"}],
+      "key_facts":[{"fact_id":"F1","required_terms":["相差一条记录","相邻数据集"],"minimum_hits":2},{"fact_id":"F2","required_terms":["epsilon","越小","隐私","越强"],"minimum_hits":4},{"fact_id":"F3","required_terms":["噪声","敏感度","成正比","epsilon","成反比"],"minimum_hits":4}],"forbidden_terms":["epsilon 越大隐私越强","差分隐私不影响效用"]
+    },
+    {
+      "id":"frozen_bootstrap_ci_001","domain":"evaluation_statistics","question":"Bootstrap 置信区间如何构造，配对系统评测时为什么应按题目重采样？",
+      "evidence":[{"evidence_id":"facts-E1","subtask_id":"facts","content":"非参数 Bootstrap 从观测样本中有放回地重复抽样，计算每次重采样的统计量，并用经验分布分位数估计置信区间。配对系统比较必须在每次重采样中保留同一道题的两系统结果配对；同题多次随机运行应先聚合或按题目成簇抽样，避免伪重复。","source":"https://projecteuclid.org/journals/annals-of-statistics/volume-7/issue-1/Bootstrap-Methods-Another-Look-at-the-Jackknife/10.1214/aos/1176344552.full","url":"https://projecteuclid.org/journals/annals-of-statistics/volume-7/issue-1/Bootstrap-Methods-Another-Look-at-the-Jackknife/10.1214/aos/1176344552.full","title":"Bootstrap Methods: Another Look at the Jackknife","source_type":"research_paper"}],
+      "key_facts":[{"fact_id":"F1","required_terms":["有放回","重复抽样","分位数"],"minimum_hits":3},{"fact_id":"F2","required_terms":["同一道题","配对"],"minimum_hits":2},{"fact_id":"F3","required_terms":["按题目","成簇","伪重复"],"minimum_hits":2}],"forbidden_terms":["Bootstrap 不需要任何独立性假设","把重复运行当成新题一定正确"]
+    },
+    {
+      "id":"frozen_cohens_d_001","domain":"evaluation_statistics","question":"Cohen's d 与配对 Cohen's dz 如何解释，为什么不能只看效应量？",
+      "evidence":[{"evidence_id":"facts-E1","subtask_id":"facts","content":"Cohen's d 用均值差除以标准差，将差异标准化；独立组常用合并组内标准差，配对设计的 Cohen's dz 使用每对差值的标准差。效应量描述差异相对变异的大小，但不表示因果、实际业务价值或估计精度，应结合置信区间和研究设计解释。","source":"https://www.itl.nist.gov/div898/handbook/eda/section3/eda35a.htm","url":"https://www.itl.nist.gov/div898/handbook/eda/section3/eda35a.htm","title":"NIST Measures of Scale and Standardized Differences","source_type":"official_reference"}],
+      "key_facts":[{"fact_id":"F1","required_terms":["均值差","标准差","标准化"],"minimum_hits":3},{"fact_id":"F2","required_terms":["配对","差值","标准差"],"minimum_hits":3},{"fact_id":"F3","required_terms":["置信区间","研究设计"],"minimum_hits":2}],"forbidden_terms":["效应量直接证明因果","d 越大一定有业务价值"]
+    },
+    {
+      "id":"frozen_precision_recall_001","domain":"evaluation_statistics","question":"Precision、Recall 与阈值之间是什么关系，为什么只报告准确率可能误导？",
+      "evidence":[{"evidence_id":"facts-E1","subtask_id":"facts","content":"Precision 是预测为正的样本中真正例比例，Recall 是所有真正例中被识别出的比例。改变决策阈值通常会在 precision 与 recall 之间产生权衡；类别极不平衡时，accuracy 可能被多数类主导，应结合混淆矩阵、PR 曲线和任务错误成本选择指标与阈值。","source":"https://scikit-learn.org/stable/auto_examples/model_selection/plot_precision_recall.html","url":"https://scikit-learn.org/stable/auto_examples/model_selection/plot_precision_recall.html","title":"scikit-learn Precision-Recall","source_type":"official_documentation"}],
+      "key_facts":[{"fact_id":"F1","required_terms":["Precision","预测为正","真正例"],"minimum_hits":3},{"fact_id":"F2","required_terms":["Recall","所有真正例","识别"],"minimum_hits":3},{"fact_id":"F3","required_terms":["阈值","权衡","类别不平衡","accuracy"],"minimum_hits":3}],"forbidden_terms":["提高阈值总会同时提高召回率","类别不平衡时 accuracy 总是充分"]
+    }
+  ]
+}

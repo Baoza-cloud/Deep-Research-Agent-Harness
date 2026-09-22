@@ -1,0 +1,225 @@
+{
+  "name": "ResearchBench-Live",
+  "version": "1.0.0",
+  "track": "live",
+  "created_at": "2026-09-16T00:00:00Z",
+  "description": "用于验证真实 Web 检索与 Dynamic Swarm 三档编组的非冻结评测集；结果不得与 Frozen 分数混合。",
+  "expected_sample_count": 15,
+  "expected_complexity_distribution": {
+    "simple": 5,
+    "standard": 5,
+    "complex": 5
+  },
+  "samples": [
+    {
+      "id": "live_simple_python_semaphore_001",
+      "domain": "programming",
+      "question": "Python asyncio.Semaphore 的基本作用是什么？",
+      "as_of_date": "2026-09-16",
+      "required_domains": ["docs.python.org"],
+      "required_terms": ["Semaphore", "acquire", "release"],
+      "min_results": 2,
+      "expected_swarm": {
+        "level": "simple",
+        "agent_count": 1,
+        "roles": ["researcher"]
+      }
+    },
+    {
+      "id": "live_simple_k8s_startup_001",
+      "domain": "cloud_native",
+      "question": "Kubernetes startup probe 的用途是什么？",
+      "as_of_date": "2026-09-16",
+      "required_domains": ["kubernetes.io"],
+      "required_terms": ["startup", "liveness", "readiness"],
+      "min_results": 2,
+      "expected_swarm": {
+        "level": "simple",
+        "agent_count": 1,
+        "roles": ["researcher"]
+      }
+    },
+    {
+      "id": "live_simple_postgres_mvcc_001",
+      "domain": "database",
+      "question": "PostgreSQL MVCC 的基本目标是什么？",
+      "as_of_date": "2026-09-16",
+      "required_domains": ["postgresql.org"],
+      "required_terms": ["MVCC", "transaction", "snapshot"],
+      "min_results": 2,
+      "expected_swarm": {
+        "level": "simple",
+        "agent_count": 1,
+        "roles": ["researcher"]
+      }
+    },
+    {
+      "id": "live_simple_openalex_works_001",
+      "domain": "academic_search",
+      "question": "OpenAlex Works API 返回什么研究实体？",
+      "as_of_date": "2026-09-16",
+      "required_domains": ["docs.openalex.org"],
+      "required_terms": ["works", "authors", "sources"],
+      "min_results": 2,
+      "expected_swarm": {
+        "level": "simple",
+        "agent_count": 1,
+        "roles": ["researcher"]
+      }
+    },
+    {
+      "id": "live_simple_nist_zero_trust_001",
+      "domain": "cybersecurity",
+      "question": "NIST 如何定义零信任架构？",
+      "as_of_date": "2026-09-16",
+      "required_domains": ["nist.gov"],
+      "required_terms": ["zero trust", "resource", "trust"],
+      "min_results": 2,
+      "expected_swarm": {
+        "level": "simple",
+        "agent_count": 1,
+        "roles": ["researcher"]
+      }
+    },
+    {
+      "id": "live_standard_python_concurrency_001",
+      "domain": "programming",
+      "question": "比较 Python TaskGroup 与 asyncio.gather 的语义、异常传播和取消行为，并说明各自适用场景。",
+      "as_of_date": "2026-09-16",
+      "required_domains": ["docs.python.org"],
+      "required_terms": ["TaskGroup", "gather", "exception"],
+      "min_results": 3,
+      "expected_swarm": {
+        "level": "standard",
+        "agent_count": 3,
+        "roles": ["scope_researcher", "evidence_researcher", "counter_researcher"]
+      }
+    },
+    {
+      "id": "live_standard_k8s_probe_001",
+      "domain": "cloud_native",
+      "question": "对比 Kubernetes liveness、readiness 与 startup probe 的行为，并分析错误配置带来的风险。",
+      "as_of_date": "2026-09-16",
+      "required_domains": ["kubernetes.io"],
+      "required_terms": ["liveness", "readiness", "startup"],
+      "min_results": 3,
+      "expected_swarm": {
+        "level": "standard",
+        "agent_count": 3,
+        "roles": ["scope_researcher", "evidence_researcher", "counter_researcher"]
+      }
+    },
+    {
+      "id": "live_standard_pgvector_index_001",
+      "domain": "vector_database",
+      "question": "比较 pgvector 的 HNSW 与 IVFFlat 索引在召回率、构建时间、内存和查询性能上的权衡，并说明两者的限制与适用场景。",
+      "as_of_date": "2026-09-16",
+      "required_domains": ["github.com"],
+      "required_terms": ["HNSW", "IVFFlat", "recall"],
+      "min_results": 3,
+      "expected_swarm": {
+        "level": "standard",
+        "agent_count": 3,
+        "roles": ["scope_researcher", "evidence_researcher", "counter_researcher"]
+      }
+    },
+    {
+      "id": "live_standard_redis_eviction_001",
+      "domain": "distributed_systems",
+      "question": "比较 Redis allkeys-lru、volatile-lru 与 allkeys-lfu 的淘汰语义、限制和适用负载。",
+      "as_of_date": "2026-09-16",
+      "required_domains": ["redis.io"],
+      "required_terms": ["allkeys-lru", "volatile-lru", "allkeys-lfu"],
+      "min_results": 3,
+      "expected_swarm": {
+        "level": "standard",
+        "agent_count": 3,
+        "roles": ["scope_researcher", "evidence_researcher", "counter_researcher"]
+      }
+    },
+    {
+      "id": "live_standard_oauth_pkce_001",
+      "domain": "identity_security",
+      "question": "比较 OAuth 2.0 PKCE 与客户端密钥的安全目标、限制和适用客户端类型。",
+      "as_of_date": "2026-09-16",
+      "required_domains": ["rfc-editor.org"],
+      "required_terms": ["PKCE", "code verifier", "client secret"],
+      "min_results": 3,
+      "expected_swarm": {
+        "level": "standard",
+        "agent_count": 3,
+        "roles": ["scope_researcher", "evidence_researcher", "counter_researcher"]
+      }
+    },
+    {
+      "id": "live_complex_eu_ai_act_001",
+      "domain": "ai_governance",
+      "question": "基于当前欧盟官方资料，比较 EU AI Act 中高风险 AI 与通用 AI 模型的合规义务，核验最新实施时间线，并分析企业部署 RAG Agent 时的风险、反例、证据局限和落地建议。",
+      "as_of_date": "2026-09-16",
+      "required_domains": ["europa.eu", "eur-lex.europa.eu"],
+      "required_terms": ["high-risk", "general-purpose", "obligations"],
+      "min_results": 5,
+      "expected_swarm": {
+        "level": "complex",
+        "agent_count": 5,
+        "roles": ["scope_researcher", "evidence_researcher", "counter_researcher", "impact_analyst", "evidence_verifier"]
+      }
+    },
+    {
+      "id": "live_complex_medical_ai_001",
+      "domain": "healthcare_ai",
+      "question": "基于当前 WHO、FDA 与 NIST 一手来源，比较生成式 AI 医疗决策支持的治理要求，核验最新变化，并分析患者安全风险、失败案例、相反证据、实施成本和医院落地建议。",
+      "as_of_date": "2026-09-16",
+      "required_domains": ["who.int", "fda.gov", "nist.gov"],
+      "required_terms": ["generative AI", "clinical", "risk"],
+      "min_results": 5,
+      "expected_swarm": {
+        "level": "complex",
+        "agent_count": 5,
+        "roles": ["scope_researcher", "evidence_researcher", "counter_researcher", "impact_analyst", "evidence_verifier"]
+      }
+    },
+    {
+      "id": "live_complex_software_supply_chain_001",
+      "domain": "software_supply_chain",
+      "question": "比较当前 SLSA、NIST SSDF 与 CISA 软件供应链安全建议，核验最新版本和适用边界，并分析企业 CI/CD 迁移的风险、争议、失败模式、成本权衡与分阶段实施方案。",
+      "as_of_date": "2026-09-16",
+      "required_domains": ["slsa.dev", "nist.gov", "cisa.gov"],
+      "required_terms": ["SLSA", "SSDF", "supply chain"],
+      "min_results": 5,
+      "expected_swarm": {
+        "level": "complex",
+        "agent_count": 5,
+        "roles": ["scope_researcher", "evidence_researcher", "counter_researcher", "impact_analyst", "evidence_verifier"]
+      }
+    },
+    {
+      "id": "live_complex_financial_rag_001",
+      "domain": "financial_services",
+      "question": "基于当前金融监管与安全标准，比较银行采用云端 RAG Agent 和本地部署方案的合规边界，核验最新要求，并分析数据泄露、模型风险、反例、多来源证据冲突、成本和实施建议。",
+      "as_of_date": "2026-09-16",
+      "required_domains": ["bis.org", "nist.gov"],
+      "required_terms": ["model risk", "cloud", "data"],
+      "min_results": 5,
+      "expected_swarm": {
+        "level": "complex",
+        "agent_count": 5,
+        "roles": ["scope_researcher", "evidence_researcher", "counter_researcher", "impact_analyst", "evidence_verifier"]
+      }
+    },
+    {
+      "id": "live_complex_research_agent_001",
+      "domain": "agentic_ai",
+      "question": "比较当前 Tavily、OpenAlex 与企业本地 RAG 作为深度研究 Agent 证据后端的能力、限制和时效性，核验官方资料，分析提示注入与引用污染风险、相反证据、成本权衡及多 Agent 实施建议。",
+      "as_of_date": "2026-09-16",
+      "required_domains": ["tavily.com", "openalex.org"],
+      "required_terms": ["search", "works", "API"],
+      "min_results": 5,
+      "expected_swarm": {
+        "level": "complex",
+        "agent_count": 5,
+        "roles": ["scope_researcher", "evidence_researcher", "counter_researcher", "impact_analyst", "evidence_verifier"]
+      }
+    }
+  ]
+}
