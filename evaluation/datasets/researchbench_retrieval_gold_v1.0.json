@@ -1,0 +1,1130 @@
+{
+  "name": "ResearchBench-Retrieval-Gold",
+  "version": "1.0.0",
+  "created_at": "2026-09-17T01:59:52.140501+00:00",
+  "track": "retrieval_gold",
+  "status": "adjudicated_gold",
+  "description": "ResearchBench-Live 校准中 33 条 Proxy 误杀候选的正式人工审核集。",
+  "source_run_id": "retrieval-calibration-20260916T145324Z",
+  "source_file": "/Users/baoza0628/Enterprise-LLM-RAG-Assistant/evaluation/results/retrieval_calibration/retrieval-calibration-20260916T145324Z.json",
+  "selection_rule": "proxy-relevant candidate removed by its calibrated role threshold",
+  "annotation_protocol": {
+    "relevance_labels": [
+      "relevant",
+      "partially_relevant",
+      "irrelevant",
+      "cannot_determine"
+    ],
+    "decision_rule": "should_retain=true only when the page materially contributes to the assigned role; source quality is judged separately",
+    "reviewer_type": "manual_semantic_review",
+    "human_verified": true,
+    "independent_second_pass_required": false,
+    "signoff": {
+      "reviewer_role": "project_owner",
+      "status": "approved",
+      "scope": "all_records",
+      "approved_at": "2026-09-17"
+    }
+  },
+  "thresholds": {
+    "researcher": 0.14,
+    "scope_researcher": 0.58,
+    "evidence_researcher": 0.54,
+    "counter_researcher": 0.56,
+    "impact_analyst": 0.56,
+    "evidence_verifier": 0.42
+  },
+  "statistics": {
+    "record_count": 33,
+    "unique_url_count": 27,
+    "decision_distribution": {
+      "correct_rejection": 15,
+      "false_rejection": 18
+    },
+    "relevance_distribution": {
+      "irrelevant": 3,
+      "partially_relevant": 14,
+      "relevant": 16
+    },
+    "false_rejection_share_of_reviewed": 0.5454545454545454,
+    "by_role": {
+      "counter_researcher": {
+        "correct_rejection": 5,
+        "false_rejection": 8,
+        "total": 13
+      },
+      "evidence_researcher": {
+        "correct_rejection": 5,
+        "false_rejection": 2,
+        "total": 7
+      },
+      "impact_analyst": {
+        "correct_rejection": 1,
+        "false_rejection": 2,
+        "total": 3
+      },
+      "scope_researcher": {
+        "correct_rejection": 4,
+        "false_rejection": 6,
+        "total": 10
+      }
+    }
+  },
+  "records": [
+    {
+      "annotation_id": "retrieval-gold-001",
+      "candidate_key": "live_standard_python_concurrency_001::scope_researcher::8",
+      "sample_id": "live_standard_python_concurrency_001",
+      "domain": "programming",
+      "question": "比较 Python TaskGroup 与 asyncio.gather 的语义、异常传播和取消行为，并说明各自适用场景。",
+      "role": "scope_researcher",
+      "retrieval_query": "比较 Python TaskGroup 与 asyncio.gather 的语义、异常传播和取消行为，并说明各自适用场景。 官方定义 术语 边界 适用范围",
+      "input_rank": 8,
+      "title": "Creating and Managing Tasks with Asyncio - DEV Community",
+      "url": "https://dev.to/koladev/creating-and-managing-tasks-with-asyncio-4kjl",
+      "source_type": "web",
+      "content_sha256": "2972b94f0b5df32af869e5c053772fb91abdad172747bc1e6d3358853e371dd7",
+      "cached_excerpt": "`asyncio.wait_for`: Wait for a task with a timeout. `asyncio.wait`: Wait for multiple tasks with flexible completion conditions. `asyncio.gather`: Aggregate multiple tasks into a single awaitable. `asyncio.as_completed`: Handle tasks as they are completed. `asyncio.TaskGroup`: Manage a group of tasks with automatic cancellation on failure. ## Conclusion [...] `asyncio.TaskGroup` manages multiple tasks and ensures that if any task fails, all other tasks in the group are canceled. In the example, a task with an error causes the entire group to be canceled, and only the results of completed tasks are printed. Usage for this can be in web scraping. You can use `asyncio.TaskGroup` to handle multiple concurrent API requests and ensure that if any request fails, all other requests are canceled to avoid incomplete data. We are at the end of the article and we have learned the multiple methods `asyncio` provides to create and manage tasks. Here is a summary of the methods: [...] However, these methods don't take atomic task management with built-in error handling. In the next section, we will see about `asyncio.TaskGroup` and how to use it to manage a group of tasks. ## `asyncio.TaskGroup` ",
+      "retrieval_relevance_score": 0.475577,
+      "role_threshold": 0.58,
+      "source_class": "web",
+      "source_authority_score": 0.35,
+      "proxy_label_reasons": [
+        "term:TaskGroup",
+        "term:gather"
+      ],
+      "annotation": {
+        "relevance": "partially_relevant",
+        "source_quality": "community",
+        "should_retain": true,
+        "decision": "false_rejection",
+        "confidence": 0.9,
+        "rationale": "直接概括 gather 与 TaskGroup 的任务聚合和失败取消差异，可支持范围梳理，但缺少完整异常传播细节。",
+        "review_basis": "cached_title_and_content"
+      }
+    },
+    {
+      "annotation_id": "retrieval-gold-002",
+      "candidate_key": "live_standard_python_concurrency_001::scope_researcher::9",
+      "sample_id": "live_standard_python_concurrency_001",
+      "domain": "programming",
+      "question": "比较 Python TaskGroup 与 asyncio.gather 的语义、异常传播和取消行为，并说明各自适用场景。",
+      "role": "scope_researcher",
+      "retrieval_query": "比较 Python TaskGroup 与 asyncio.gather 的语义、异常传播和取消行为，并说明各自适用场景。 官方定义 术语 边界 适用范围",
+      "input_rank": 9,
+      "title": "Asyncio, tasks, and exception handling - recommended idioms? - Async-SIG - Discussions on Python.org",
+      "url": "https://discuss.python.org/t/asyncio-tasks-and-exception-handling-recommended-idioms/23806",
+      "source_type": "web",
+      "content_sha256": "26a850d2f2fd49b31b0995da335d723f60db4bf852584bdccb42eb6fa9a36140",
+      "cached_excerpt": "If you want to keep the user-triggered tasks running when one of them raises an unhandled exception, you should NOT use the vanilla `TaskGroup`. It will cancel all others immediately. `TaskGroup` I’m going to propose another API which works like `asyncio.gather(..., return_exceptions=True)` with a safety guarantee and which can add tasks at any time during its lifetime. Currently it’s being worked here: Asyncio supervisor by DontPanicO · Pull Request #31 · achimnol/cpython · GitHub `asyncio.gather(..., return_exceptions=True)` Taken from the comment: [...] To add some clarity here: The app uses GTK as its UI, which means that any user-triggered actions come in via callback functions (connect signal to function). These are not async functions, so they have to do their work and then finish. Writing to a subprocess’s stdin is usually fast, but is technically asynchronous, and could potentially take a bit of time (if the other end has stalled or something), so we can’t just wait for it before returning. Thus the need to spin off an asynchronous task and return. TaskGroup looks really nice for the situations where there’s a well-defined group (“do all these things and don’t return till ",
+      "retrieval_relevance_score": 0.474589,
+      "role_threshold": 0.58,
+      "source_class": "web",
+      "source_authority_score": 0.35,
+      "proxy_label_reasons": [
+        "term:TaskGroup",
+        "term:gather",
+        "term:exception"
+      ],
+      "annotation": {
+        "relevance": "relevant",
+        "source_quality": "authoritative_community",
+        "should_retain": true,
+        "decision": "false_rejection",
+        "confidence": 0.96,
+        "rationale": "Python 官方社区讨论直接比较 TaskGroup 与 gather(return_exceptions=True) 的取消及异常语义。",
+        "review_basis": "cached_title_and_content"
+      }
+    },
+    {
+      "annotation_id": "retrieval-gold-003",
+      "candidate_key": "live_standard_python_concurrency_001::evidence_researcher::10",
+      "sample_id": "live_standard_python_concurrency_001",
+      "domain": "programming",
+      "question": "比较 Python TaskGroup 与 asyncio.gather 的语义、异常传播和取消行为，并说明各自适用场景。",
+      "role": "evidence_researcher",
+      "retrieval_query": "比较 Python TaskGroup 与 asyncio.gather 的语义、异常传播和取消行为，并说明各自适用场景。 一手来源 官方文档 原始数据 直接证据",
+      "input_rank": 10,
+      "title": "用asyncio.TaskGroup() 有咩好處？ : r/learnpython",
+      "url": "https://www.reddit.com/r/learnpython/comments/123iw6q/whats_the_advantage_of_using_asynciotaskgroup?tl=zh-hant",
+      "source_type": "web",
+      "content_sha256": "8aa07203176e1776e794aeef40b721345b4ef7b5c145f0c63ed4daa648d5a43d",
+      "cached_excerpt": "雖然看起來如果不想因為其中一個任務出錯就取消所有任務， asyncio.gather() 好像更好用。特別是，如果你傳入 return_exceptions=True 給 asyncio.gather ...Read more",
+      "retrieval_relevance_score": 0.407079,
+      "role_threshold": 0.54,
+      "source_class": "web",
+      "source_authority_score": 0.35,
+      "proxy_label_reasons": [
+        "term:TaskGroup",
+        "term:gather",
+        "term:exception"
+      ],
+      "annotation": {
+        "relevance": "partially_relevant",
+        "source_quality": "community",
+        "should_retain": false,
+        "decision": "correct_rejection",
+        "confidence": 0.94,
+        "rationale": "内容涉及两者差异，但只有截断的 Reddit 讨论，不能作为 Evidence 角色所需的稳定证据。",
+        "review_basis": "cached_title_and_content"
+      }
+    },
+    {
+      "annotation_id": "retrieval-gold-004",
+      "candidate_key": "live_standard_python_concurrency_001::counter_researcher::9",
+      "sample_id": "live_standard_python_concurrency_001",
+      "domain": "programming",
+      "question": "比较 Python TaskGroup 与 asyncio.gather 的语义、异常传播和取消行为，并说明各自适用场景。",
+      "role": "counter_researcher",
+      "retrieval_query": "比较 Python TaskGroup 与 asyncio.gather 的语义、异常传播和取消行为，并说明各自适用场景。 反例 局限 失败案例 争议 相反证据",
+      "input_rank": 9,
+      "title": "Async TaskGroups are brand new and INSANELY USEFUL",
+      "url": "https://www.youtube.com/watch?v=zrA9WpSXrQE",
+      "source_type": "web",
+      "content_sha256": "86599b981d228fd7ff1eda18e77fad5b3317f4b6da14451942caa89cf34c17dc",
+      "cached_excerpt": "[3:50] officially accepted way to do things if uh or for new code it said to use task groups over um asyncode.gather of course if you need [4:00] compatibility with all the versions of python if you're doing like a python package index library or something then you would still use gather rather than the task groups but if it only needs to [4:08] support 3.11 then you can use task scripts and should use task scripts instead according to python now before I go I do want to you know briefly talk [4:17] about this exception handling thing that it has so if I just get rid of this because we don't need it and then we copy paste this and we start giving it [4:25] some invalid tasks so say we want it to count to a string of four or to a value of 1.5 both of these should fail [...] [4:34] and both of them do and we get this exception group here if I this we get quite a big exception so we have this [4:42] huge information about how the exception group was raised but then we also get the um the two sub-exceptions so we have [4:51] our first one this is caused by our task here uh so it's uh can only concatenate string not int to string [5:00] and then we have our second one here float object ",
+      "retrieval_relevance_score": 0.314533,
+      "role_threshold": 0.56,
+      "source_class": "web",
+      "source_authority_score": 0.35,
+      "proxy_label_reasons": [
+        "term:TaskGroup",
+        "term:gather",
+        "term:exception"
+      ],
+      "annotation": {
+        "relevance": "relevant",
+        "source_quality": "community_video",
+        "should_retain": true,
+        "decision": "false_rejection",
+        "confidence": 0.91,
+        "rationale": "给出了 Python 版本兼容限制和异常组行为，直接补充 TaskGroup 的适用边界与反例。",
+        "review_basis": "cached_title_and_content"
+      }
+    },
+    {
+      "annotation_id": "retrieval-gold-005",
+      "candidate_key": "live_standard_python_concurrency_001::counter_researcher::10",
+      "sample_id": "live_standard_python_concurrency_001",
+      "domain": "programming",
+      "question": "比较 Python TaskGroup 与 asyncio.gather 的语义、异常传播和取消行为，并说明各自适用场景。",
+      "role": "counter_researcher",
+      "retrieval_query": "比较 Python TaskGroup 与 asyncio.gather 的语义、异常传播和取消行为，并说明各自适用场景。 反例 局限 失败案例 争议 相反证据",
+      "input_rank": 10,
+      "title": "用asyncio.TaskGroup() 有啥好处？ : r/learnpython",
+      "url": "https://www.reddit.com/r/learnpython/comments/123iw6q/whats_the_advantage_of_using_asynciotaskgroup?tl=zh-hans",
+      "source_type": "web",
+      "content_sha256": "79d4c574fb3bd2c3a25b5da4030b1d1aa15c22bd92dfa7634e82ac6721b5a0ea",
+      "cached_excerpt": "据我所知，使用TaskGroup 的主要优势在于异常处理，使用TaskGroup 时，除了取消之外，任何一个任务中的异常都会导致其他任务自动取消。",
+      "retrieval_relevance_score": 0.48439,
+      "role_threshold": 0.56,
+      "source_class": "web",
+      "source_authority_score": 0.35,
+      "proxy_label_reasons": [
+        "term:TaskGroup"
+      ],
+      "annotation": {
+        "relevance": "partially_relevant",
+        "source_quality": "community",
+        "should_retain": false,
+        "decision": "correct_rejection",
+        "confidence": 0.93,
+        "rationale": "只陈述 TaskGroup 失败时取消其他任务，没有形成 gather 对照或新的限制证据。",
+        "review_basis": "cached_title_and_content"
+      }
+    },
+    {
+      "annotation_id": "retrieval-gold-006",
+      "candidate_key": "live_standard_pgvector_index_001::counter_researcher::8",
+      "sample_id": "live_standard_pgvector_index_001",
+      "domain": "vector_database",
+      "question": "比较 pgvector 的 HNSW 与 IVFFlat 索引在召回率、构建时间、内存和查询性能上的权衡，并说明两者的限制与适用场景。",
+      "role": "counter_researcher",
+      "retrieval_query": "比较 pgvector 的 HNSW 与 IVFFlat 索引在召回率、构建时间、内存和查询性能上的权衡，并说明两者的限制与适用场景。 反例 局限 失败案例 争议 相反证据",
+      "input_rank": 8,
+      "title": "Vector Indexes: HNSW vs IVFFLAT vs IVF_RaBitQ",
+      "url": "https://kodesage.ai/blog/vector-indexes-hnsw-vs-ivfflat-vs-ivf-rabitq",
+      "source_type": "web",
+      "content_sha256": "e6ea5aeb52480e75d8572d62d268690fd6b44c5b0e79f4727331b5d7cf2cc483",
+      "cached_excerpt": "Vector indexes promise faster similarity search, but each comes with trade-offs in speed and recall. In this article, we compare HNSW, IVFFLAT, and IVF_RaBitQ to reveal their strengths, limitations, and the scenarios where each shines. The topic of vector indexing has been around ever since we store vectors in databases at large scale. Their purpose is to find the closest vectors to our query vector in a faster manner, using some pre-made structures, which eliminate doing the whole computation at query time. We all want fast and accurate queries, but at what cost? Are there any pitfalls? In this article we try to give answer to these questions. [...] To summarise, HNSW is a very reliable index type with generally the fastest query times. But depending on our use case, it is wise to take some caution when choosing an implementation and parametrising the index. ### Pros: Most widespread index type, available in almost all vector databases. It is generally considered to be the one of the fastest indexes in terms of query speed. Scales well with high-dimensional vectors. ### Cons: Slow index build time, with certain applications frequent rebuilding might be necessary. Handling of delet",
+      "retrieval_relevance_score": 0.476905,
+      "role_threshold": 0.56,
+      "source_class": "web",
+      "source_authority_score": 0.35,
+      "proxy_label_reasons": [
+        "term:HNSW",
+        "term:IVFFlat",
+        "term:recall"
+      ],
+      "annotation": {
+        "relevance": "relevant",
+        "source_quality": "technical_secondary",
+        "should_retain": true,
+        "decision": "false_rejection",
+        "confidence": 0.92,
+        "rationale": "系统比较 HNSW 与 IVFFlat 的召回、查询速度、构建成本和局限；虽非 pgvector 专文，仍直接服务反例与权衡分析。",
+        "review_basis": "cached_title_and_content"
+      }
+    },
+    {
+      "annotation_id": "retrieval-gold-007",
+      "candidate_key": "live_standard_redis_eviction_001::scope_researcher::10",
+      "sample_id": "live_standard_redis_eviction_001",
+      "domain": "distributed_systems",
+      "question": "比较 Redis allkeys-lru、volatile-lru 与 allkeys-lfu 的淘汰语义、限制和适用负载。",
+      "role": "scope_researcher",
+      "retrieval_query": "比较 Redis allkeys-lru、volatile-lru 与 allkeys-lfu 的淘汰语义、限制和适用负载。 官方定义 术语 边界 适用范围",
+      "input_rank": 10,
+      "title": "Redis的内存淘汰策略- allkeys-lru 原创",
+      "url": "https://blog.csdn.net/Flying_Fish_roe/article/details/141503892",
+      "source_type": "web",
+      "content_sha256": "6b1ad9703bc6535ea595a83377e748ef6cd01eec76c5b91e7da2bd3133fe977d",
+      "cached_excerpt": "在`allkeys-lru` 策略下，当Redis 的内存使用达到设置的上限（`maxmemory`）时，它会根据LRU 算法选择和删除那些最近最少使用的键。LRU 算法会记录每",
+      "retrieval_relevance_score": 0.551685,
+      "role_threshold": 0.58,
+      "source_class": "web",
+      "source_authority_score": 0.35,
+      "proxy_label_reasons": [
+        "term:allkeys-lru"
+      ],
+      "annotation": {
+        "relevance": "partially_relevant",
+        "source_quality": "community",
+        "should_retain": false,
+        "decision": "correct_rejection",
+        "confidence": 0.96,
+        "rationale": "只解释 allkeys-lru，未覆盖 volatile-lru、allkeys-lfu 或三者适用边界。",
+        "review_basis": "cached_title_and_content"
+      }
+    },
+    {
+      "annotation_id": "retrieval-gold-008",
+      "candidate_key": "live_standard_redis_eviction_001::evidence_researcher::7",
+      "sample_id": "live_standard_redis_eviction_001",
+      "domain": "distributed_systems",
+      "question": "比较 Redis allkeys-lru、volatile-lru 与 allkeys-lfu 的淘汰语义、限制和适用负载。",
+      "role": "evidence_researcher",
+      "retrieval_query": "比较 Redis allkeys-lru、volatile-lru 与 allkeys-lfu 的淘汰语义、限制和适用负载。 一手来源 官方文档 原始数据 直接证据",
+      "input_rank": 7,
+      "title": "LFU vs. LRU: How to choose the right cache eviction policy | Redis",
+      "url": "https://redis.io/blog/lfu-vs-lru-how-to-choose-the-right-cache-eviction-policy",
+      "source_type": "web",
+      "content_sha256": "d0381909ec311efe1e3368349ac4e8173ba8787954c83fd0918d96c3f70ba863",
+      "cached_excerpt": "LFU and LRU are the two most common cache eviction policies. LFU favors data with high access frequency, and LRU focuses on recency of access. LFU evicts items that have been used the least often over time. LFU assumes that infrequently accessed items are less valuable and less likely to need rapid retrieval. LRU evicts items that have gone unused for the longest period of time. LRU assumes that if the data hasn’t been accessed for a long period of time, it’s unlikely to be needed soon. When items are tied with the same frequency, recency is often the tiebreaker that determines which item gets evicted. A recently accessed item with low frequency might stay in the cache instead of another infrequently used item that hasn't been accessed in a while. [...] LFU is often seen as a suitable policy for workloads with stable, predictable data access patterns. The core idea of LFU is to prioritize data with proven, persistent popularity, so it often works when data is relatively predictable. The pros of LFU include: Consistently popular items tend to be available for longer. Predictable, stable traffic patterns are well supported. Repetitive access patterns are supported with little latency",
+      "retrieval_relevance_score": 0.480756,
+      "role_threshold": 0.54,
+      "source_class": "official_documentation",
+      "source_authority_score": 0.9,
+      "proxy_label_reasons": [
+        "domain:redis.io"
+      ],
+      "annotation": {
+        "relevance": "relevant",
+        "source_quality": "official_vendor",
+        "should_retain": true,
+        "decision": "false_rejection",
+        "confidence": 0.99,
+        "rationale": "Redis 官方页面直接解释 LFU 与 LRU 的频率/时近语义和选择条件，属于高价值一手证据。",
+        "review_basis": "cached_title_and_content"
+      }
+    },
+    {
+      "annotation_id": "retrieval-gold-009",
+      "candidate_key": "live_standard_redis_eviction_001::counter_researcher::5",
+      "sample_id": "live_standard_redis_eviction_001",
+      "domain": "distributed_systems",
+      "question": "比较 Redis allkeys-lru、volatile-lru 与 allkeys-lfu 的淘汰语义、限制和适用负载。",
+      "role": "counter_researcher",
+      "retrieval_query": "比较 Redis allkeys-lru、volatile-lru 与 allkeys-lfu 的淘汰语义、限制和适用负载。 反例 局限 失败案例 争议 相反证据",
+      "input_rank": 5,
+      "title": "redis篇-LRU cache设计指南",
+      "url": "https://zhuanlan.zhihu.com/p/294062360",
+      "source_type": "web",
+      "content_sha256": "daa60c40426a1a17658cc3d86fee8af01dd79a3d0e6c6dec5e7610e8b93386de",
+      "cached_excerpt": "LFU同样提供了两种数据过期策略：volatile-lfu 和allkeys-lfu，分别是过期集合和全集中选择目标。 除此之外为了控制访问频率计数器的增长和衰弱速度",
+      "retrieval_relevance_score": 0.465971,
+      "role_threshold": 0.56,
+      "source_class": "web",
+      "source_authority_score": 0.35,
+      "proxy_label_reasons": [
+        "term:allkeys-lfu"
+      ],
+      "annotation": {
+        "relevance": "partially_relevant",
+        "source_quality": "community",
+        "should_retain": false,
+        "decision": "correct_rejection",
+        "confidence": 0.94,
+        "rationale": "仅列出 volatile-lfu 与 allkeys-lfu 的集合差异，缺少题目要求的三策略限制和负载对照。",
+        "review_basis": "cached_title_and_content"
+      }
+    },
+    {
+      "annotation_id": "retrieval-gold-010",
+      "candidate_key": "live_standard_redis_eviction_001::counter_researcher::7",
+      "sample_id": "live_standard_redis_eviction_001",
+      "domain": "distributed_systems",
+      "question": "比较 Redis allkeys-lru、volatile-lru 与 allkeys-lfu 的淘汰语义、限制和适用负载。",
+      "role": "counter_researcher",
+      "retrieval_query": "比较 Redis allkeys-lru、volatile-lru 与 allkeys-lfu 的淘汰语义、限制和适用负载。 反例 局限 失败案例 争议 相反证据",
+      "input_rank": 7,
+      "title": "Redis的内存淘汰策略- allkeys-lru 原创",
+      "url": "https://blog.csdn.net/Flying_Fish_roe/article/details/141503892",
+      "source_type": "web",
+      "content_sha256": "fb00f134e5dedcbf6bbd3166191b0938f0cce8ec75533391c3ce1165588890c6",
+      "cached_excerpt": "在`allkeys-lru` 策略下，当Redis 的内存使用达到设置的上限（`maxmemory`）时，它会根据LRU 算法选择和删除那些最近最少使用的键。",
+      "retrieval_relevance_score": 0.546179,
+      "role_threshold": 0.56,
+      "source_class": "web",
+      "source_authority_score": 0.35,
+      "proxy_label_reasons": [
+        "term:allkeys-lru"
+      ],
+      "annotation": {
+        "relevance": "partially_relevant",
+        "source_quality": "community",
+        "should_retain": false,
+        "decision": "correct_rejection",
+        "confidence": 0.97,
+        "rationale": "仅重复 allkeys-lru 的基本语义，没有提供反例、失败模式或比较证据。",
+        "review_basis": "cached_title_and_content"
+      }
+    },
+    {
+      "annotation_id": "retrieval-gold-011",
+      "candidate_key": "live_standard_oauth_pkce_001::scope_researcher::10",
+      "sample_id": "live_standard_oauth_pkce_001",
+      "domain": "identity_security",
+      "question": "比较 OAuth 2.0 PKCE 与客户端密钥的安全目标、限制和适用客户端类型。",
+      "role": "scope_researcher",
+      "retrieval_query": "比较 OAuth 2.0 PKCE 与客户端密钥的安全目标、限制和适用客户端类型。 官方定义 术语 边界 适用范围",
+      "input_rank": 10,
+      "title": "PKCE — OAuth 2.0",
+      "url": "https://oauth.net/2/pkce",
+      "source_type": "web",
+      "content_sha256": "7f404b2879c85355fadc4dc955e38159b7f70a3ba2b182be39e6675cd3f74ed8",
+      "cached_excerpt": "PKCE is not a form of client authentication and does not replace a client secret. Use it alongside whatever client authentication method you're already using — it adds a separate layer of protection against code injection. When to use this Use PKCE on every Authorization Code flow. It was originally designed for mobile and native apps (which can't safely store a client secret), but its protection against authorization code injection makes it valuable for all client types, including confidential web apps. ### Videos What's New With OAuth and OIDC? (8:22) What's the Difference between Confidential and Public Clients? What's Going On with the Implicit Flow? ### Tools PKCE on the OAuth 2.0 Playground (oauth.com) PKCE Code Challenge Generator (example-app.com) ### More resources [...] AI-powered ad network for devs. Get your message in front of the right developers with EthicalAds. Ads by EthicalAds OAuth oauth.net Featured Video Course: The Nuts & Bolts of OAuth 2.0 ## Proof Key for Code Exchange (PKCE) RFC 7636 Published rfc-editor.org/rfc/rfc7636 PKCE prevents authorization code injection and CSRF attacks in the Authorization Code flow. It is recommended for all OAuth clients — not j",
+      "retrieval_relevance_score": 0.537633,
+      "role_threshold": 0.58,
+      "source_class": "web",
+      "source_authority_score": 0.35,
+      "proxy_label_reasons": [
+        "term:PKCE",
+        "term:code verifier",
+        "term:client secret"
+      ],
+      "annotation": {
+        "relevance": "relevant",
+        "source_quality": "authoritative_secondary",
+        "should_retain": true,
+        "decision": "false_rejection",
+        "confidence": 0.98,
+        "rationale": "直接澄清 PKCE 不替代客户端密钥，并说明公共与机密客户端的适用范围。",
+        "review_basis": "cached_title_and_content"
+      }
+    },
+    {
+      "annotation_id": "retrieval-gold-012",
+      "candidate_key": "live_standard_oauth_pkce_001::evidence_researcher::6",
+      "sample_id": "live_standard_oauth_pkce_001",
+      "domain": "identity_security",
+      "question": "比较 OAuth 2.0 PKCE 与客户端密钥的安全目标、限制和适用客户端类型。",
+      "role": "evidence_researcher",
+      "retrieval_query": "比较 OAuth 2.0 PKCE 与客户端密钥的安全目标、限制和适用客户端类型。 一手来源 官方文档 原始数据 直接证据",
+      "input_rank": 6,
+      "title": "Proof Key for Code Exchange (PKCE)",
+      "url": "https://oauth.net/2/pkce",
+      "source_type": "web",
+      "content_sha256": "7f404b2879c85355fadc4dc955e38159b7f70a3ba2b182be39e6675cd3f74ed8",
+      "cached_excerpt": "PKCE is not a form of client authentication and does not replace a client secret. Use it alongside whatever client authentication method you're already using — it adds a separate layer of protection against code injection. When to use this Use PKCE on every Authorization Code flow. It was originally designed for mobile and native apps (which can't safely store a client secret), but its protection against authorization code injection makes it valuable for all client types, including confidential web apps. ### Videos What's New With OAuth and OIDC? (8:22) What's the Difference between Confidential and Public Clients? What's Going On with the Implicit Flow? ### Tools PKCE on the OAuth 2.0 Playground (oauth.com) PKCE Code Challenge Generator (example-app.com) ### More resources [...] AI-powered ad network for devs. Get your message in front of the right developers with EthicalAds. Ads by EthicalAds OAuth oauth.net Featured Video Course: The Nuts & Bolts of OAuth 2.0 ## Proof Key for Code Exchange (PKCE) RFC 7636 Published rfc-editor.org/rfc/rfc7636 PKCE prevents authorization code injection and CSRF attacks in the Authorization Code flow. It is recommended for all OAuth clients — not j",
+      "retrieval_relevance_score": 0.533437,
+      "role_threshold": 0.54,
+      "source_class": "web",
+      "source_authority_score": 0.35,
+      "proxy_label_reasons": [
+        "term:PKCE",
+        "term:code verifier",
+        "term:client secret"
+      ],
+      "annotation": {
+        "relevance": "relevant",
+        "source_quality": "authoritative_secondary",
+        "should_retain": true,
+        "decision": "false_rejection",
+        "confidence": 0.98,
+        "rationale": "OAuth.net 页面提供 PKCE、安全目标、code verifier 与 client secret 关系的直接证据。",
+        "review_basis": "cached_title_and_content"
+      }
+    },
+    {
+      "annotation_id": "retrieval-gold-013",
+      "candidate_key": "live_standard_oauth_pkce_001::counter_researcher::4",
+      "sample_id": "live_standard_oauth_pkce_001",
+      "domain": "identity_security",
+      "question": "比较 OAuth 2.0 PKCE 与客户端密钥的安全目标、限制和适用客户端类型。",
+      "role": "counter_researcher",
+      "retrieval_query": "比较 OAuth 2.0 PKCE 与客户端密钥的安全目标、限制和适用客户端类型。 反例 局限 失败案例 争议 相反证据",
+      "input_rank": 4,
+      "title": "Proof Key for Code Exchange (PKCE)",
+      "url": "https://oauth.net/2/pkce",
+      "source_type": "web",
+      "content_sha256": "7f404b2879c85355fadc4dc955e38159b7f70a3ba2b182be39e6675cd3f74ed8",
+      "cached_excerpt": "PKCE is not a form of client authentication and does not replace a client secret. Use it alongside whatever client authentication method you're already using — it adds a separate layer of protection against code injection. When to use this Use PKCE on every Authorization Code flow. It was originally designed for mobile and native apps (which can't safely store a client secret), but its protection against authorization code injection makes it valuable for all client types, including confidential web apps. ### Videos What's New With OAuth and OIDC? (8:22) What's the Difference between Confidential and Public Clients? What's Going On with the Implicit Flow? ### Tools PKCE on the OAuth 2.0 Playground (oauth.com) PKCE Code Challenge Generator (example-app.com) ### More resources [...] AI-powered ad network for devs. Get your message in front of the right developers with EthicalAds. Ads by EthicalAds OAuth oauth.net Featured Video Course: The Nuts & Bolts of OAuth 2.0 ## Proof Key for Code Exchange (PKCE) RFC 7636 Published rfc-editor.org/rfc/rfc7636 PKCE prevents authorization code injection and CSRF attacks in the Authorization Code flow. It is recommended for all OAuth clients — not j",
+      "retrieval_relevance_score": 0.531057,
+      "role_threshold": 0.56,
+      "source_class": "web",
+      "source_authority_score": 0.35,
+      "proxy_label_reasons": [
+        "term:PKCE",
+        "term:code verifier",
+        "term:client secret"
+      ],
+      "annotation": {
+        "relevance": "relevant",
+        "source_quality": "authoritative_secondary",
+        "should_retain": true,
+        "decision": "false_rejection",
+        "confidence": 0.99,
+        "rationale": "明确指出 PKCE 不是客户端认证且不能替代 client secret，正是所需限制证据。",
+        "review_basis": "cached_title_and_content"
+      }
+    },
+    {
+      "annotation_id": "retrieval-gold-014",
+      "candidate_key": "live_standard_oauth_pkce_001::counter_researcher::7",
+      "sample_id": "live_standard_oauth_pkce_001",
+      "domain": "identity_security",
+      "question": "比较 OAuth 2.0 PKCE 与客户端密钥的安全目标、限制和适用客户端类型。",
+      "role": "counter_researcher",
+      "retrieval_query": "比较 OAuth 2.0 PKCE 与客户端密钥的安全目标、限制和适用客户端类型。 反例 局限 失败案例 争议 相反证据",
+      "input_rank": 7,
+      "title": "Attacking and Defending OAuth 2.0 (Part 2 of 2: Attacking OAuth 2.0 Authorization Servers) | Praetorian",
+      "url": "https://www.praetorian.com/blog/attacking-and-defending-oauth-2",
+      "source_type": "web",
+      "content_sha256": "5c43b3be5bec02594278cca06f931fb76d8f2402aea4df1d8e7c0181e371d93c",
+      "cached_excerpt": "## PKCE Downgrade Attack Proof Key for Code Exchange (PKCE) is an extension of the OAuth 2.0 framework that adds additional security and allows public clients to perform the authorization code flow. This extension is described in detail in part one of this blog series. One aspect of PKCE that was not discussed was the “plain” code challenge method. [...] One possible vulnerability that could arise from supporting the “plain” code challenge method is a downgrade attack. One of the security benefits clients receive by using PKCE for their OAuth 2.0 flows is that an attacker sniffing network traffic cannot intercept and use an authorization code. Consider the following scenario: 1. A user begins the authorization code flow, sending the following in their authorization request: “code\\_challenge\\_method=S256&code\\_challenge=HaE7…s3h4ef” 2. An attacker on the user’s device or network sniffs the “code\\_challenge” value 3. The authorization server responds with an authorization code 4. An attacker intercepts the authorization code in the HTTP 302 response [...] When the code challenge is being sent by the client to the authorization server during the authorization request, the client must ",
+      "retrieval_relevance_score": 0.527627,
+      "role_threshold": 0.56,
+      "source_class": "web",
+      "source_authority_score": 0.35,
+      "proxy_label_reasons": [
+        "term:PKCE",
+        "term:code verifier"
+      ],
+      "annotation": {
+        "relevance": "relevant",
+        "source_quality": "security_research",
+        "should_retain": true,
+        "decision": "false_rejection",
+        "confidence": 0.98,
+        "rationale": "详细讨论 plain challenge 导致的 PKCE downgrade attack，属于直接安全反例。",
+        "review_basis": "cached_title_and_content"
+      }
+    },
+    {
+      "annotation_id": "retrieval-gold-015",
+      "candidate_key": "live_standard_oauth_pkce_001::counter_researcher::8",
+      "sample_id": "live_standard_oauth_pkce_001",
+      "domain": "identity_security",
+      "question": "比较 OAuth 2.0 PKCE 与客户端密钥的安全目标、限制和适用客户端类型。",
+      "role": "counter_researcher",
+      "retrieval_query": "比较 OAuth 2.0 PKCE 与客户端密钥的安全目标、限制和适用客户端类型。 反例 局限 失败案例 争议 相反证据",
+      "input_rank": 8,
+      "title": "Authorization Code Flow with Proof Key for Code Exchange (PKCE) - Auth0 Docs",
+      "url": "https://auth0.com/docs/get-started/authentication-and-authorization-flow/authorization-code-flow-with-pkce",
+      "source_type": "web",
+      "content_sha256": "c58ae6c56f13ae4cd5ebc050a1d42fdac6f6df817fc2bffb4cb9b33552e4522f",
+      "cached_excerpt": "## Overview Key Concepts Learn about the OAuth 2.0 grant type, Authorization Code Flow with Proof Key for Code Exchange (PKCE). Use this grant type for applications that cannot store a client secret, such as native or single-page apps. Review different implementation methods with Auth0 SDKs. When (e.g., native and single-page applications) request , some additional security concerns are posed that are not mitigated by the Authorization Code Flow alone. This is because: Native apps [...] Cannot securely store a . Decompiling the app will reveal the , which is bound to the app and is the same for all users and devices. Are vulnerable to authorization code interception and injection attacks. Without a client secret, an attacker who intercepts the authorization code can exchange it for tokens. May make use of a custom URL scheme to capture redirects (e.g., MyApp://) potentially allowing malicious applications to receive an from your . Because of this risk, Auth0 strongly discourages the use of custom URI schemes. To learn more, read Measures Against Application Impersonation. Single-page apps Cannot securely store a Client Secret because their entire source is available to the browser.",
+      "retrieval_relevance_score": 0.52634,
+      "role_threshold": 0.56,
+      "source_class": "web",
+      "source_authority_score": 0.35,
+      "proxy_label_reasons": [
+        "term:PKCE",
+        "term:code verifier",
+        "term:client secret"
+      ],
+      "annotation": {
+        "relevance": "relevant",
+        "source_quality": "official_vendor",
+        "should_retain": true,
+        "decision": "false_rejection",
+        "confidence": 0.97,
+        "rationale": "Auth0 文档说明无法安全保存 client secret 的客户端类型及授权码流程限制。",
+        "review_basis": "cached_title_and_content"
+      }
+    },
+    {
+      "annotation_id": "retrieval-gold-016",
+      "candidate_key": "live_complex_medical_ai_001::scope_researcher::5",
+      "sample_id": "live_complex_medical_ai_001",
+      "domain": "healthcare_ai",
+      "question": "基于当前 WHO、FDA 与 NIST 一手来源，比较生成式 AI 医疗决策支持的治理要求，核验最新变化，并分析患者安全风险、失败案例、相反证据、实施成本和医院落地建议。",
+      "role": "scope_researcher",
+      "retrieval_query": "基于当前 WHO、FDA 与 NIST 一手来源，比较生成式 AI 医疗决策支持的治理要求，核验最新变化，并分析患者安全风险、失败案例、相反证据、实施成本和医院落地建议。 官方定义 术语 边界 适用范围",
+      "input_rank": 5,
+      "title": "FDA Oversight: Understanding the Regulation of Health AI Tools • Bipartisan Policy Center",
+      "url": "https://bipartisanpolicy.org/issue-brief/fda-oversight-understanding-the-regulation-of-health-ai-tools",
+      "source_type": "web",
+      "content_sha256": "8aff3d26678b81622363aa632a1fbcd437cbe83028c288faecfc7c6c3c3a0bac",
+      "cached_excerpt": "Generative AI: A subfield of AI that enables computers to create new content—such as text, images, or data—with outputs that can vary. It is still experimental in clinical settings. Large Language Models (LLMs): Advanced generative AI systems trained on large volumes of data to summarize, translate, predict, and generate contextual conversations. ## Scope of FDA Oversight and Operational Capacity The FDA applies a risk-based approach to oversight, requiring that devices “demonstrate a reasonable assurance of safety and effectiveness.” Higher risk devices undergo more rigorous testing and review than lower risk ones. [...] ## Types of Health AI within the FDA’s Jurisdiction Under Section 201(h) of the Federal Food, Drug, and Cosmetic Act ( AI is considered a medical device—and subject to FDA regulation—if it is intended for use in the diagnosis, cure, mitigation, treatment, or prevention of disease. The FDA does not typically regulate AI used for administrative tasks (e.g., scheduling or billing) or general wellness information unless its “intended use” brings it within scope. For example, an AI tool that merely transcribes clinical notes would likely fall outside FDA oversight, but",
+      "retrieval_relevance_score": 0.442657,
+      "role_threshold": 0.58,
+      "source_class": "web",
+      "source_authority_score": 0.35,
+      "proxy_label_reasons": [
+        "term:generative AI",
+        "term:clinical",
+        "term:risk"
+      ],
+      "annotation": {
+        "relevance": "relevant",
+        "source_quality": "authoritative_secondary",
+        "should_retain": true,
+        "decision": "false_rejection",
+        "confidence": 0.97,
+        "rationale": "直接梳理 FDA 对健康 AI 的监管范围、风险分级和受监管/不受监管功能边界。",
+        "review_basis": "cached_title_and_content"
+      }
+    },
+    {
+      "annotation_id": "retrieval-gold-017",
+      "candidate_key": "live_complex_medical_ai_001::scope_researcher::6",
+      "sample_id": "live_complex_medical_ai_001",
+      "domain": "healthcare_ai",
+      "question": "基于当前 WHO、FDA 与 NIST 一手来源，比较生成式 AI 医疗决策支持的治理要求，核验最新变化，并分析患者安全风险、失败案例、相反证据、实施成本和医院落地建议。",
+      "role": "scope_researcher",
+      "retrieval_query": "基于当前 WHO、FDA 与 NIST 一手来源，比较生成式 AI 医疗决策支持的治理要求，核验最新变化，并分析患者安全风险、失败案例、相反证据、实施成本和医院落地建议。 官方定义 术语 边界 适用范围",
+      "input_rank": 6,
+      "title": "Meeting the Moment: Addressing Barriers and Facilitating ...",
+      "url": "https://nam.edu/perspectives/meeting-the-moment-addressing-barriers-and-facilitating-clinical-adoption-of-artificial-intelligence-in-medical-diagnosis",
+      "source_type": "web",
+      "content_sha256": "dd6cb037d607b984dcc6d4e18e6b5227d121a2be07c5a4991ea1f3effae89501",
+      "cached_excerpt": "The FDA, CDC, and ONC should ensure transparency and publicly accessible reporting for flaws and safety incidents related to AI-DDS tools, malfunctions, and patient harm. Software developers should integrate human clinical diagnosticians at all phases of software development, design, validation, implementation, and iterative improvements. [...] To minimize concerns about liability, nuanced, thoughtful regulation and governance from all levels of the U.S. government – federal, state, and local – can reassure providers that they can trust available AI-DDS tools and move forward with implementation. A key factor affecting clinicians’ willingness to adopt AI-DDS tools is likely whether the tools will receive a rigorous, data-driven review of safety and effectiveness by the FDA before moving into clinical use. A potential concern is that some, but not necessarily all, AI-DDS software is subject to FDA medical device regulation under the Cures Act. It remains difficult for providers to intuit whether a given type of AI-DDS tool is or is not likely to have received oversight under FDA’s medical device regulations. Uncertainty about [...] Assuming the saving clause does not apply, AI/DDS t",
+      "retrieval_relevance_score": 0.441306,
+      "role_threshold": 0.58,
+      "source_class": "web",
+      "source_authority_score": 0.35,
+      "proxy_label_reasons": [
+        "term:clinical"
+      ],
+      "annotation": {
+        "relevance": "relevant",
+        "source_quality": "professional_organization",
+        "should_retain": true,
+        "decision": "false_rejection",
+        "confidence": 0.95,
+        "rationale": "国家医学院材料直接讨论 FDA 监管边界、临床采用障碍、透明度和患者安全。",
+        "review_basis": "cached_title_and_content"
+      }
+    },
+    {
+      "annotation_id": "retrieval-gold-018",
+      "candidate_key": "live_complex_medical_ai_001::scope_researcher::7",
+      "sample_id": "live_complex_medical_ai_001",
+      "domain": "healthcare_ai",
+      "question": "基于当前 WHO、FDA 与 NIST 一手来源，比较生成式 AI 医疗决策支持的治理要求，核验最新变化，并分析患者安全风险、失败案例、相反证据、实施成本和医院落地建议。",
+      "role": "scope_researcher",
+      "retrieval_query": "基于当前 WHO、FDA 与 NIST 一手来源，比较生成式 AI 医疗决策支持的治理要求，核验最新变化，并分析患者安全风险、失败案例、相反证据、实施成本和医院落地建议。 官方定义 术语 边界 适用范围",
+      "input_rank": 7,
+      "title": "Clinical Evidence Requirements for AI Diagnostic Tools | IntuitionLabs",
+      "url": "https://intuitionlabs.ai/articles/clinical-evidence-requirements-ai-diagnostics",
+      "source_type": "web",
+      "content_sha256": "69380784134ec8e42be267e6a5bb5302d11bf653af88dd0d0648b50ff75ea202",
+      "cached_excerpt": "Regulatory Evolution: The EU AI Act (effective 2024-25) will soon impose explicit obligations on “high-risk” healthcare AI, including post-market monitoring, mandatory logging of models’ decision rationales (to an extent), and responsiveness to anomalies. FDA is working on a Proposed Rule for AI/ML SaMD continued learning. International harmonization efforts (IMDRF, WHO) may eventually standardize expectations across jurisdictions. [...] Limitations: Overfitting is a major risk if data are limited or not diverse (( Even a high AUC on internal validation does not guarantee real-world success. Key failure modes include lack of external validity: e.g., an algorithm trained on one hospital’s CT machines may underperform on a different machine. There is also a trend of “data leakage” or bias: retrospective cohorts often exclude borderline cases or have spectrum bias (( Regulatory View: Such studies are necessary but only preliminary. The FDA generally expects at least a “clincial performance assessment” to accompany 510(k) for AI in imaging (( Some FDA guidances suggest retrospective data are acceptable for initial clearance, provided the databases are robust (e.g. Radiological Computer",
+      "retrieval_relevance_score": 0.438491,
+      "role_threshold": 0.58,
+      "source_class": "web",
+      "source_authority_score": 0.35,
+      "proxy_label_reasons": [
+        "term:clinical",
+        "term:risk"
+      ],
+      "annotation": {
+        "relevance": "partially_relevant",
+        "source_quality": "commercial_secondary",
+        "should_retain": false,
+        "decision": "correct_rejection",
+        "confidence": 0.88,
+        "rationale": "主题相关且覆盖临床证据要求，但关键监管表述来自商业二手文章，不满足本题一手来源约束。",
+        "review_basis": "cached_title_and_content"
+      }
+    },
+    {
+      "annotation_id": "retrieval-gold-019",
+      "candidate_key": "live_complex_medical_ai_001::scope_researcher::9",
+      "sample_id": "live_complex_medical_ai_001",
+      "domain": "healthcare_ai",
+      "question": "基于当前 WHO、FDA 与 NIST 一手来源，比较生成式 AI 医疗决策支持的治理要求，核验最新变化，并分析患者安全风险、失败案例、相反证据、实施成本和医院落地建议。",
+      "role": "scope_researcher",
+      "retrieval_query": "基于当前 WHO、FDA 与 NIST 一手来源，比较生成式 AI 医疗决策支持的治理要求，核验最新变化，并分析患者安全风险、失败案例、相反证据、实施成本和医院落地建议。 官方定义 术语 边界 适用范围",
+      "input_rank": 9,
+      "title": "Towards secure and trusted AI in healthcare: A systematic review of ...",
+      "url": "https://www.sciencedirect.com/science/article/pii/S138650562400443X",
+      "source_type": "web",
+      "content_sha256": "06113d1b9ab9d3cb6bf6816651691828bf34ab782aeab6c7b28f6072f7e494ff",
+      "cached_excerpt": "AI systems must be armed to handle failures with poise, categorizing impending points of failure and executing safety measures to alleviate risks.",
+      "retrieval_relevance_score": 0.284236,
+      "role_threshold": 0.58,
+      "source_class": "web",
+      "source_authority_score": 0.35,
+      "proxy_label_reasons": [
+        "term:risk"
+      ],
+      "annotation": {
+        "relevance": "partially_relevant",
+        "source_quality": "peer_reviewed",
+        "should_retain": false,
+        "decision": "correct_rejection",
+        "confidence": 0.91,
+        "rationale": "系统综述与医疗 AI 风险相关，但缓存片段不足以支持 WHO/FDA/NIST 治理范围比较。",
+        "review_basis": "cached_title_and_content"
+      }
+    },
+    {
+      "annotation_id": "retrieval-gold-020",
+      "candidate_key": "live_complex_medical_ai_001::evidence_researcher::8",
+      "sample_id": "live_complex_medical_ai_001",
+      "domain": "healthcare_ai",
+      "question": "基于当前 WHO、FDA 与 NIST 一手来源，比较生成式 AI 医疗决策支持的治理要求，核验最新变化，并分析患者安全风险、失败案例、相反证据、实施成本和医院落地建议。",
+      "role": "evidence_researcher",
+      "retrieval_query": "基于当前 WHO、FDA 与 NIST 一手来源，比较生成式 AI 医疗决策支持的治理要求，核验最新变化，并分析患者安全风险、失败案例、相反证据、实施成本和医院落地建议。 一手来源 官方文档 原始数据 直接证据",
+      "input_rank": 8,
+      "title": "Clinical Evidence Requirements for AI Diagnostic Tools | IntuitionLabs",
+      "url": "https://intuitionlabs.ai/articles/clinical-evidence-requirements-ai-diagnostics",
+      "source_type": "web",
+      "content_sha256": "620275485ffbfcc87d927d4d32965fc8db99f9564cad602e7598884cda6ec83a",
+      "cached_excerpt": "Regulatory Evolution: The EU AI Act (effective 2024-25) will soon impose explicit obligations on “high-risk” healthcare AI, including post-market monitoring, mandatory logging of models’ decision rationales (to an extent), and responsiveness to anomalies. FDA is working on a Proposed Rule for AI/ML SaMD continued learning. International harmonization efforts (IMDRF, WHO) may eventually standardize expectations across jurisdictions. [...] Technology Maintenance: If an AI tool is updated (e.g. new model trained on more data), regulators may treat this as a new iteration requiring new evidence or streamlined review. The FDA’s forthcoming “Predetermined Change Control Plan” concept addresses how manufacturers should plan for future updates. Reproducibility: Replication of performance in independent settings is part of evidence quality. For example, a multi-center study of the Viz.ai LVO tool across 166 hospitals found consistent reduction in stroke treatment times (( (Data from 2023 press reports indicate ~30–40 minutes saved in door-to-puncture times (( later confirmed in a peer-reviewed single-center study (( [...] Continuous Learning Systems: Traditional evidence models assume a sta",
+      "retrieval_relevance_score": 0.445133,
+      "role_threshold": 0.54,
+      "source_class": "web",
+      "source_authority_score": 0.35,
+      "proxy_label_reasons": [
+        "term:clinical",
+        "term:risk"
+      ],
+      "annotation": {
+        "relevance": "partially_relevant",
+        "source_quality": "commercial_secondary",
+        "should_retain": false,
+        "decision": "correct_rejection",
+        "confidence": 0.92,
+        "rationale": "涉及临床证据、持续学习和变更控制，但为二手汇总，不能替代题目要求的一手证据。",
+        "review_basis": "cached_title_and_content"
+      }
+    },
+    {
+      "annotation_id": "retrieval-gold-021",
+      "candidate_key": "live_complex_medical_ai_001::evidence_researcher::9",
+      "sample_id": "live_complex_medical_ai_001",
+      "domain": "healthcare_ai",
+      "question": "基于当前 WHO、FDA 与 NIST 一手来源，比较生成式 AI 医疗决策支持的治理要求，核验最新变化，并分析患者安全风险、失败案例、相反证据、实施成本和医院落地建议。",
+      "role": "evidence_researcher",
+      "retrieval_query": "基于当前 WHO、FDA 与 NIST 一手来源，比较生成式 AI 医疗决策支持的治理要求，核验最新变化，并分析患者安全风险、失败案例、相反证据、实施成本和医院落地建议。 一手来源 官方文档 原始数据 直接证据",
+      "input_rank": 9,
+      "title": "Artificial intelligence in healthcare",
+      "url": "https://en.wikipedia.org/wiki/Artificial_intelligence_in_healthcare",
+      "source_type": "web",
+      "content_sha256": "acc9ead6f490795278a8445276ab6b64af16dcfaf7ad7c044696e90b000c7718",
+      "cached_excerpt": "139. ↑ Liu X, Cruz Rivera S, Moher D, Calvert MJ, Denniston AK (September 2020). \"Reporting guidelines for clinical trial reports for interventions involving artificial intelligence: the CONSORT-AI extension\". Nature Medicine. 26 (9): 1364–1374. doi \"Doi (identifier)\"):10.1038/s41591-020-1034-x. PMC \"PMC (identifier)\") 7598943. PMID \"PMID (identifier)\") 32908283. 140. 1 2 3 4 5 6 Webster P (May 2025). \"US AI regulatory rollback and health\". The Lancet. 405 (10490): 1654–1656. doi \"Doi (identifier)\"):10.1016/S0140-6736(25)00980-8. 141. ↑ \"World Health Organization (WHO)\". AI for Good. Retrieved 2026-07-19. 142. ↑ Office of the Commissioner (2022-11-30). \"About FDA\". FDA. Retrieved 2023-04-08. [...] 143. ↑ \"Civil Rights for Providers of Health Care and Human Services\". hhs.gov. Office for Civil Rights. 2015-09-05. Retrieved 2022-12-17. 144. ↑ \"Preparing for the Future of Artificial Intelligence\". whitehouse.gov. 2016-05-03. Retrieved 2025-08-18. 145. 1 2 \"OCR of the Document | National Security Archive\". nsarchive.gwu.edu. Retrieved 2025-08-18. 146. ↑ Health Cf (2025-08-18). \"Predetermined Change Control Plans for Machine Learning-Enabled Medical Devices: Guiding Principles\". FDA. 14",
+      "retrieval_relevance_score": 0.440851,
+      "role_threshold": 0.54,
+      "source_class": "web",
+      "source_authority_score": 0.35,
+      "proxy_label_reasons": [
+        "term:clinical"
+      ],
+      "annotation": {
+        "relevance": "irrelevant",
+        "source_quality": "tertiary",
+        "should_retain": false,
+        "decision": "correct_rejection",
+        "confidence": 0.98,
+        "rationale": "返回内容主要是 Wikipedia 参考文献列表，没有形成可直接引用的治理事实证据。",
+        "review_basis": "cached_title_and_content"
+      }
+    },
+    {
+      "annotation_id": "retrieval-gold-022",
+      "candidate_key": "live_complex_medical_ai_001::counter_researcher::3",
+      "sample_id": "live_complex_medical_ai_001",
+      "domain": "healthcare_ai",
+      "question": "基于当前 WHO、FDA 与 NIST 一手来源，比较生成式 AI 医疗决策支持的治理要求，核验最新变化，并分析患者安全风险、失败案例、相反证据、实施成本和医院落地建议。",
+      "role": "counter_researcher",
+      "retrieval_query": "基于当前 WHO、FDA 与 NIST 一手来源，比较生成式 AI 医疗决策支持的治理要求，核验最新变化，并分析患者安全风险、失败案例、相反证据、实施成本和医院落地建议。 反例 局限 失败案例 争议 相反证据",
+      "input_rank": 3,
+      "title": "Generative Artificial Intelligence in Healthcare: Applications, Implementation Challenges, and Future Directions",
+      "url": "https://www.mdpi.com/2673-7426/5/3/37",
+      "source_type": "web",
+      "content_sha256": "ac44a1095c78b01ca108f6a66386f76c9e47b78588cfbb16a02790bf85e3ee03",
+      "cached_excerpt": "medical education and training. Early studies have indicated that generative AI models can improve efficiency, reduce administrative burdens, and enhance patient engagement, although most findings are preliminary and require rigorous validation. However, the technology also raises serious concerns around accuracy, bias, privacy, ethical use, and clinical safety. Regulatory bodies, including the FDA and EMA, are beginning to define governance frameworks, while academic institutions and healthcare organizations emphasize the need for transparency, supervision, and evidence-based implementation. Generative AI is not a replacement for medical professionals but a potential partner—augmenting decision-making, streamlining communication, and supporting personalized care. Its responsible [...] The regulatory oversight of generative AI in healthcare is still in its formative stages. Currently, most regulatory agencies—including the FDA and EMA—evaluate AI tools under the broader category of Software as a Medical Device (SaMD). The FDA’s existing guidance (e.g., the “Proposed Regulatory Framework for Modifications to AI/ML-Based Software as a Medical Device” issued in 2019) primarily applies",
+      "retrieval_relevance_score": 0.454816,
+      "role_threshold": 0.56,
+      "source_class": "web",
+      "source_authority_score": 0.35,
+      "proxy_label_reasons": [
+        "term:generative AI",
+        "term:clinical"
+      ],
+      "annotation": {
+        "relevance": "relevant",
+        "source_quality": "peer_reviewed",
+        "should_retain": true,
+        "decision": "false_rejection",
+        "confidence": 0.97,
+        "rationale": "同行评审综述直接覆盖生成式 AI 医疗应用的准确性、偏见、隐私和临床安全挑战。",
+        "review_basis": "cached_title_and_content"
+      }
+    },
+    {
+      "annotation_id": "retrieval-gold-023",
+      "candidate_key": "live_complex_medical_ai_001::counter_researcher::7",
+      "sample_id": "live_complex_medical_ai_001",
+      "domain": "healthcare_ai",
+      "question": "基于当前 WHO、FDA 与 NIST 一手来源，比较生成式 AI 医疗决策支持的治理要求，核验最新变化，并分析患者安全风险、失败案例、相反证据、实施成本和医院落地建议。",
+      "role": "counter_researcher",
+      "retrieval_query": "基于当前 WHO、FDA 与 NIST 一手来源，比较生成式 AI 医疗决策支持的治理要求，核验最新变化，并分析患者安全风险、失败案例、相反证据、实施成本和医院落地建议。 反例 局限 失败案例 争议 相反证据",
+      "input_rank": 7,
+      "title": "Frontiers | Ethical and practical challenges of generative AI in healthcare and proposed solutions: a survey",
+      "url": "https://www.frontiersin.org/journals/digital-health/articles/10.3389/fdgth.2025.1692517/full",
+      "source_type": "web",
+      "content_sha256": "2b2f0651ac5577777cd99748cd77d2f051b52140432796f516f5304d51bc2a96",
+      "cached_excerpt": "The addition of generative AI in the healthcare industry is a process that presents many ethical and practical challenges. These obstacles need to be addressed in order for the developers, healthcare professionals, and patients to all experience the benefits that AI can offer. Examples of these challenges include the lack of transparency, trust, and regulatory laws. Bias and liability concerns are present, and patient information is at risk of being exposed. A myriad of proposed solutions are being formulated by many individuals in different countries, showing the impact that AI can make worldwide once all issues are confronted. After discussing the current state of AI in healthcare and the current concerns, this article brought forth many of these solutions as well as some implemented [...] Simply suggesting these changes will only lead to some individuals taking actions. Others will see it as a mere recommendation; therefore, laws need to be put into place to enforce the vital aspects of medical AI. Most countries have established new laws or updated previous ones. However, for the basic requirements, more AI-specific international laws need to be created. This way, the main foun",
+      "retrieval_relevance_score": 0.294405,
+      "role_threshold": 0.56,
+      "source_class": "web",
+      "source_authority_score": 0.35,
+      "proxy_label_reasons": [
+        "term:generative AI",
+        "term:risk"
+      ],
+      "annotation": {
+        "relevance": "relevant",
+        "source_quality": "peer_reviewed",
+        "should_retain": true,
+        "decision": "false_rejection",
+        "confidence": 0.97,
+        "rationale": "同行评审调查直接提供透明度、责任、隐私和监管缺口等反面证据。",
+        "review_basis": "cached_title_and_content"
+      }
+    },
+    {
+      "annotation_id": "retrieval-gold-024",
+      "candidate_key": "live_complex_medical_ai_001::counter_researcher::8",
+      "sample_id": "live_complex_medical_ai_001",
+      "domain": "healthcare_ai",
+      "question": "基于当前 WHO、FDA 与 NIST 一手来源，比较生成式 AI 医疗决策支持的治理要求，核验最新变化，并分析患者安全风险、失败案例、相反证据、实施成本和医院落地建议。",
+      "role": "counter_researcher",
+      "retrieval_query": "基于当前 WHO、FDA 与 NIST 一手来源，比较生成式 AI 医疗决策支持的治理要求，核验最新变化，并分析患者安全风险、失败案例、相反证据、实施成本和医院落地建议。 反例 局限 失败案例 争议 相反证据",
+      "input_rank": 8,
+      "title": "Harnessing artificial intelligence for health",
+      "url": "https://www.who.int/teams/digital-health-and-innovation/harnessing-artificial-intelligence-for-health",
+      "source_type": "web",
+      "content_sha256": "88e4f4dd5f7832c63e5e056e4fdff4f7ccc867d237456a55aa50062370cf6c68",
+      "cached_excerpt": "Artificial Intelligence (AI) refers to the capability of algorithms integrated into systems and tools to learn from data so that they can perform automated... Regulatory considerations on artificial intelligence for health ### Regulatory considerations on artificial intelligence for health The International Telecommunication Union (ITU) is the United Nation’s specialized agency for information and communications technology while WHO... Generating Evidence for Artificial Intelligence Based Medical Devices: A Framework for Training Validation and Evaluation ### Generating Evidence for Artificial Intelligence Based Medical Devices: A Framework for Training Validation... [...] # Online courses ### WHO Online introductory course on Ethics and Governance of Al for Health ### Integrating ethics and governance into the design of artificial intelligence tools for health. Case study: Cervical cancer screening # Publications and press releases Artificial intelligence and evidence-informed policy: emerging challenges and opportunities: discussion paper ### Artificial intelligence and evidence-informed policy: emerging challenges and opportunities: discussion... Artificial intelligence (AI) is ",
+      "retrieval_relevance_score": 0.473828,
+      "role_threshold": 0.56,
+      "source_class": "government",
+      "source_authority_score": 0.98,
+      "proxy_label_reasons": [
+        "domain:who.int",
+        "term:risk"
+      ],
+      "annotation": {
+        "relevance": "relevant",
+        "source_quality": "official",
+        "should_retain": true,
+        "decision": "false_rejection",
+        "confidence": 0.99,
+        "rationale": "WHO 官方页面直接覆盖健康 AI 监管、证据生成和风险治理，应保留。",
+        "review_basis": "cached_title_and_content"
+      }
+    },
+    {
+      "annotation_id": "retrieval-gold-025",
+      "candidate_key": "live_complex_medical_ai_001::counter_researcher::9",
+      "sample_id": "live_complex_medical_ai_001",
+      "domain": "healthcare_ai",
+      "question": "基于当前 WHO、FDA 与 NIST 一手来源，比较生成式 AI 医疗决策支持的治理要求，核验最新变化，并分析患者安全风险、失败案例、相反证据、实施成本和医院落地建议。",
+      "role": "counter_researcher",
+      "retrieval_query": "基于当前 WHO、FDA 与 NIST 一手来源，比较生成式 AI 医疗决策支持的治理要求，核验最新变化，并分析患者安全风险、失败案例、相反证据、实施成本和医院落地建议。 反例 局限 失败案例 争议 相反证据",
+      "input_rank": 9,
+      "title": "Risks of Artificial Intelligence (AI) in Medicine",
+      "url": "https://www.pneumon.org/Risks-of-Artificial-Intelligence-AI-in-Medicine,191736,0,2.html",
+      "source_type": "web",
+      "content_sha256": "8ac246daed7489ac7044d8d2238be61fe8a8d1b28a49c4f9a3048836b234645e",
+      "cached_excerpt": "## Conclusion Although AI has a huge beneficial impact on medical science, it is followed by several significant risks and dangers. It is strongly suggested for medical organizations to monitor the changes which are associated with the giant steps of AI development, and modify accordingly medical education and practice. The major risks might emerge when AI becomes more powerful than the human brain, thus it is of paramount importance to develop solid and safe mechanisms to keep AI under control. The establishment of an ethical pathway could be one of the safe ways for AI to remain human-friendly in the future. Go to reference CONFLICTS OF INTEREST [...] Implementation Health providers are not adequately trained to use AI technologies, thus, the implementation of these modes of treatment in practice, raises additional security and error issues, until a widely accepted training system for healthcare providers can be established17. Furthermore, AI may harm the doctor–patient relationship18. In-depth knowledge of AI evaluation and performance is required by doctors, to communicate the role of AI meaningfully to patients, and avoid patients’ fear and confusion19. Fake news-medical infor",
+      "retrieval_relevance_score": 0.284781,
+      "role_threshold": 0.56,
+      "source_class": "web",
+      "source_authority_score": 0.35,
+      "proxy_label_reasons": [
+        "term:risk"
+      ],
+      "annotation": {
+        "relevance": "partially_relevant",
+        "source_quality": "scholarly_secondary",
+        "should_retain": false,
+        "decision": "correct_rejection",
+        "confidence": 0.91,
+        "rationale": "讨论一般医疗 AI 风险，但没有聚焦生成式 AI、具体治理要求或失败案例。",
+        "review_basis": "cached_title_and_content"
+      }
+    },
+    {
+      "annotation_id": "retrieval-gold-026",
+      "candidate_key": "live_complex_medical_ai_001::impact_analyst::4",
+      "sample_id": "live_complex_medical_ai_001",
+      "domain": "healthcare_ai",
+      "question": "基于当前 WHO、FDA 与 NIST 一手来源，比较生成式 AI 医疗决策支持的治理要求，核验最新变化，并分析患者安全风险、失败案例、相反证据、实施成本和医院落地建议。",
+      "role": "impact_analyst",
+      "retrieval_query": "基于当前 WHO、FDA 与 NIST 一手来源，比较生成式 AI 医疗决策支持的治理要求，核验最新变化，并分析患者安全风险、失败案例、相反证据、实施成本和医院落地建议。 风险 权衡 成本 影响 实施建议",
+      "input_rank": 4,
+      "title": "FDA Oversight: Understanding the Regulation of Health AI Tools",
+      "url": "https://bipartisanpolicy.org/issue-brief/fda-oversight-understanding-the-regulation-of-health-ai-tools",
+      "source_type": "web",
+      "content_sha256": "a9aa75b95c99ba3f769dbfd5343aa7ee3ee4b9bf0e497555356f3ba80865ff5b",
+      "cached_excerpt": "Generative AI: A subfield of AI that enables computers to create new content—such as text, images, or data—with outputs that can vary. It is still experimental in clinical settings. Large Language Models (LLMs): Advanced generative AI systems trained on large volumes of data to summarize, translate, predict, and generate contextual conversations. ## Scope of FDA Oversight and Operational Capacity The FDA applies a risk-based approach to oversight, requiring that devices “demonstrate a reasonable assurance of safety and effectiveness.” Higher risk devices undergo more rigorous testing and review than lower risk ones. [...] January 2025: The FDA published draft guidance, Artificial Intelligence-Enabled Device Software Functions: Lifecycle Management and Marketing Submission Recommendations, with lifecycle considerations and recommendations to support marketing submissions for AI-enabled medical devices. The agency published additional draft guidance, Considerations for the Use of Artificial Intelligence To Support Regulatory Decision-Making for Drug and Biological Products, that included recommendations for sponsors and other stakeholders on the use of AI to produce information or da",
+      "retrieval_relevance_score": 0.439875,
+      "role_threshold": 0.56,
+      "source_class": "web",
+      "source_authority_score": 0.35,
+      "proxy_label_reasons": [
+        "term:generative AI",
+        "term:clinical",
+        "term:risk"
+      ],
+      "annotation": {
+        "relevance": "relevant",
+        "source_quality": "authoritative_secondary",
+        "should_retain": true,
+        "decision": "false_rejection",
+        "confidence": 0.97,
+        "rationale": "覆盖 FDA 监管路径、2025 指南时间线和生成式 AI 医疗部署影响，可直接支持实施分析。",
+        "review_basis": "cached_title_and_content"
+      }
+    },
+    {
+      "annotation_id": "retrieval-gold-027",
+      "candidate_key": "live_complex_medical_ai_001::impact_analyst::5",
+      "sample_id": "live_complex_medical_ai_001",
+      "domain": "healthcare_ai",
+      "question": "基于当前 WHO、FDA 与 NIST 一手来源，比较生成式 AI 医疗决策支持的治理要求，核验最新变化，并分析患者安全风险、失败案例、相反证据、实施成本和医院落地建议。",
+      "role": "impact_analyst",
+      "retrieval_query": "基于当前 WHO、FDA 与 NIST 一手来源，比较生成式 AI 医疗决策支持的治理要求，核验最新变化，并分析患者安全风险、失败案例、相反证据、实施成本和医院落地建议。 风险 权衡 成本 影响 实施建议",
+      "input_rank": 5,
+      "title": "AI-Enabled Medical Devices: New FDA Draft Guidance and ...",
+      "url": "https://www.youtube.com/watch?v=s0OaVnpQQpg",
+      "source_type": "web",
+      "content_sha256": "e8c846e5f6523aded3c8b31882c4f6ed8871e5f67601e40546ad6309afdb4f14",
+      "cached_excerpt": "We've talked about that all through the presentation. That is going to be a requirement. Uh regatory engagements, they're going to want you to get them involved early as you're doing this, especially if it's something that maybe you can't put the right controls in based on the way they've done it because the regulatory pieces don't always match up with how we think and what we're doing. you need to be involved with those early on and submit and follow approved uh predetermined change controls with the FDA in that process. U postmarket surveillance, they're going to absolutely make these vendors that are putting these together uh continuously monitor device performance. They're going to make sure that they look at uh timely emerging cyber security threats because the cyber security [...] noticed it. We know that. But it was still millions of dollars and they got to it through the fish tank. So how things are connected are very important. So the FDA basically said look we need to make sure you validate those AI algorithms to to against and demonstrate consistent performance across areas to make sure at least if something's noticed it gets notified and there's a mitigation for that. D",
+      "retrieval_relevance_score": 0.436478,
+      "role_threshold": 0.56,
+      "source_class": "web",
+      "source_authority_score": 0.35,
+      "proxy_label_reasons": [
+        "term:clinical",
+        "term:risk"
+      ],
+      "annotation": {
+        "relevance": "partially_relevant",
+        "source_quality": "community_video",
+        "should_retain": false,
+        "decision": "correct_rejection",
+        "confidence": 0.9,
+        "rationale": "片段涉及监管沟通和变更控制，但来源与上下文不足以支撑医院级实施建议。",
+        "review_basis": "cached_title_and_content"
+      }
+    },
+    {
+      "annotation_id": "retrieval-gold-028",
+      "candidate_key": "live_complex_medical_ai_001::impact_analyst::9",
+      "sample_id": "live_complex_medical_ai_001",
+      "domain": "healthcare_ai",
+      "question": "基于当前 WHO、FDA 与 NIST 一手来源，比较生成式 AI 医疗决策支持的治理要求，核验最新变化，并分析患者安全风险、失败案例、相反证据、实施成本和医院落地建议。",
+      "role": "impact_analyst",
+      "retrieval_query": "基于当前 WHO、FDA 与 NIST 一手来源，比较生成式 AI 医疗决策支持的治理要求，核验最新变化，并分析患者安全风险、失败案例、相反证据、实施成本和医院落地建议。 风险 权衡 成本 影响 实施建议",
+      "input_rank": 9,
+      "title": "Ethics and governance of artificial intelligence for health",
+      "url": "https://www.who.int/publications/i/item/9789240029200",
+      "source_type": "web",
+      "content_sha256": "598194ffd40f55ae75a401bc16a97392f16e9055c1d0772d35ed5f49c9e14118",
+      "cached_excerpt": "World Health Organization World Health Organization Africa Americas South-East Asia Europe Eastern Mediterranean Western Pacific Home # Ethics and governance of artificial intelligence for health WHO guidance Ethics and governance of artificial intelligence for health ### Overview [...] ### Overview The WHO guidance on Ethics & Governance of Artificial Intelligence for Health is the product of eighteen months of deliberation amongst leading experts in ethics, digital technology, law, human rights, as well as experts from Ministries of Health. While new technologies that use artificial intelligence hold great promise to improve diagnosis, treatment, health research and drug development and to support governments carrying out public health functions, including surveillance and outbreak response, such technologies, according to the report, must put ethics and human rights at the heart of its design, deployment, and use. [...] The report identifies the ethical challenges and risks with the use of artificial intelligence of health, six consensus principles to ensure AI works to the public benefit of all countries. It also contains a set of recommendations that can ensure the governance ",
+      "retrieval_relevance_score": 0.471409,
+      "role_threshold": 0.56,
+      "source_class": "government",
+      "source_authority_score": 0.98,
+      "proxy_label_reasons": [
+        "domain:who.int",
+        "term:risk"
+      ],
+      "annotation": {
+        "relevance": "relevant",
+        "source_quality": "official",
+        "should_retain": true,
+        "decision": "false_rejection",
+        "confidence": 0.99,
+        "rationale": "WHO 官方伦理与治理指南直接支持患者安全、治理风险和落地影响分析。",
+        "review_basis": "cached_title_and_content"
+      }
+    },
+    {
+      "annotation_id": "retrieval-gold-029",
+      "candidate_key": "live_complex_financial_rag_001::evidence_researcher::5",
+      "sample_id": "live_complex_financial_rag_001",
+      "domain": "financial_services",
+      "question": "基于当前金融监管与安全标准，比较银行采用云端 RAG Agent 和本地部署方案的合规边界，核验最新要求，并分析数据泄露、模型风险、反例、多来源证据冲突、成本和实施建议。",
+      "role": "evidence_researcher",
+      "retrieval_query": "基于当前金融监管与安全标准，比较银行采用云端 RAG Agent 和本地部署方案的合规边界，核验最新要求，并分析数据泄露、模型风险、反例、多来源证据冲突、成本和实施建议。 一手来源 官方文档 原始数据 直接证据",
+      "input_rank": 5,
+      "title": "DLP数据防泄漏 | ZONE.CI 全球网",
+      "url": "https://zone.ci/secarticles/wx/547091.html",
+      "source_type": "web",
+      "content_sha256": "68da7591a734104df60a5afcc2d0fdb05d2a0f85a65226c0e29ec2017b924290",
+      "cached_excerpt": "Title: DLP数据防泄漏 | ZONE.CI 全球网 # ZONE.CI 全球网 ZONE.CI 全球网. #### Plugins. #### WordPress. #### Web前端. #### 设计资源. https://zone.ci//secarticles/wx/547091.html 复制链接 复制链接. # DLP数据防泄漏. 2026-06-26 06:25:03 网络安全文章 来源：ZONE.CI 全球网 0 阅读模式. **文章总结：** 本文系统阐述了数据防泄漏(DLP)技术体系，涵盖其定义、核心价值、技术原理、部署模式及未来趋势。DLP通过深度内容检测与上下文分析，对使用中、传输中、静态存储的数据进行识别、监控与管控，以满足合规要求、防护内部威胁及保护知识产权。关键技术包括正则表达式、文档指纹、机器学习、UEBA等，部署模式涵盖网络、终端与云。未来DLP将与零信任架构深度融合，并借助AI技术提升智能防护能力。 **综合评分：** 88 **文章分类：** 数据安全,应用安全,终端安全,云安全,安全建设. 在数字化浪潮中，数据已成为企业的核心资产。然而，数据泄露事件频发，不仅造成直接经济损失，更严重损害企业声誉。**数据防泄漏（Data Loss Prevention，简称DLP）**正是应对这一挑战的关键技术体系。. 本文将从DLP的基本概念、核心价值、技术原理、部署实践和未来趋势等方面，为您系统梳理这一重要领域。. #### 一、什么是DLP？. 美国国家标准与技术研究院（NIST）在其官方术语表（CSRC Glossary）中，将DLP定义为：. > **“一种系统能力，用于通过深度数据包内容检测、交易上下文安全分析（包括发起者、数据对象、媒介、时间、接收方/目的地等属性），在一个集中管理框架内，识别、监控和保护使用中的数据（如端点操作）、传输中的数据（如网络行为）和静态存储中的数据（如数据存储）。DLP功能旨在检测并防止NSS信息的未授权使用和传输。”**. 在中国，DLP的”官方性”体现为行业标准或业界公认的阐述。例如，在通信行业，有中华人民共和国工业和信息化部发布的行业标准《电信网数据泄露防护系统（DLP）技术要求》（YD/T 3735-2020），其中对DLP产品的功能、性能和安全提出了具体要求。这可以视为特定行业内的”官方技术要求”。而在行业共识层面，一种普遍认可的定义是：. #### 总得来说，DLP是一套用于识别、**监控、检测并阻止**敏感数据被非法传输、复制或泄露的技术解决方案。其核心理念是确保敏感数据无论处于**使用中（终端操作）**、**传输中（网络流量）**，还是**静态存储（服务器/数据库）**，都能得到有效保护，防止其违反组织的安全策略流出企业边界。简单来说，DLP的目标是实现“敏感数据可见、",
+      "retrieval_relevance_score": 0.533232,
+      "role_threshold": 0.54,
+      "source_class": "web",
+      "source_authority_score": 0.35,
+      "proxy_label_reasons": [
+        "term:data"
+      ],
+      "annotation": {
+        "relevance": "partially_relevant",
+        "source_quality": "low_quality_aggregator",
+        "should_retain": false,
+        "decision": "correct_rejection",
+        "confidence": 0.98,
+        "rationale": "只讨论通用 DLP，与银行云端/本地 RAG、模型风险及监管边界缺乏直接关系。",
+        "review_basis": "cached_title_and_content"
+      }
+    },
+    {
+      "annotation_id": "retrieval-gold-030",
+      "candidate_key": "live_complex_financial_rag_001::evidence_researcher::6",
+      "sample_id": "live_complex_financial_rag_001",
+      "domain": "financial_services",
+      "question": "基于当前金融监管与安全标准，比较银行采用云端 RAG Agent 和本地部署方案的合规边界，核验最新要求，并分析数据泄露、模型风险、反例、多来源证据冲突、成本和实施建议。",
+      "role": "evidence_researcher",
+      "retrieval_query": "基于当前金融监管与安全标准，比较银行采用云端 RAG Agent 和本地部署方案的合规边界，核验最新要求，并分析数据泄露、模型风险、反例、多来源证据冲突、成本和实施建议。 一手来源 官方文档 原始数据 直接证据",
+      "input_rank": 6,
+      "title": "DLP数据防泄漏 | ZONE.CI 全球网",
+      "url": "https://security.zone.ci/secarticles/wx/547091.html",
+      "source_type": "web",
+      "content_sha256": "68da7591a734104df60a5afcc2d0fdb05d2a0f85a65226c0e29ec2017b924290",
+      "cached_excerpt": "Title: DLP数据防泄漏 | ZONE.CI 全球网 # ZONE.CI 全球网 ZONE.CI 全球网. #### Plugins. #### WordPress. #### Web前端. #### 设计资源. https://zone.ci//secarticles/wx/547091.html 复制链接 复制链接. # DLP数据防泄漏. 2026-06-26 06:25:03 网络安全文章 来源：ZONE.CI 全球网 0 阅读模式. **文章总结：** 本文系统阐述了数据防泄漏(DLP)技术体系，涵盖其定义、核心价值、技术原理、部署模式及未来趋势。DLP通过深度内容检测与上下文分析，对使用中、传输中、静态存储的数据进行识别、监控与管控，以满足合规要求、防护内部威胁及保护知识产权。关键技术包括正则表达式、文档指纹、机器学习、UEBA等，部署模式涵盖网络、终端与云。未来DLP将与零信任架构深度融合，并借助AI技术提升智能防护能力。 **综合评分：** 88 **文章分类：** 数据安全,应用安全,终端安全,云安全,安全建设. 在数字化浪潮中，数据已成为企业的核心资产。然而，数据泄露事件频发，不仅造成直接经济损失，更严重损害企业声誉。**数据防泄漏（Data Loss Prevention，简称DLP）**正是应对这一挑战的关键技术体系。. 本文将从DLP的基本概念、核心价值、技术原理、部署实践和未来趋势等方面，为您系统梳理这一重要领域。. #### 一、什么是DLP？. 美国国家标准与技术研究院（NIST）在其官方术语表（CSRC Glossary）中，将DLP定义为：. > **“一种系统能力，用于通过深度数据包内容检测、交易上下文安全分析（包括发起者、数据对象、媒介、时间、接收方/目的地等属性），在一个集中管理框架内，识别、监控和保护使用中的数据（如端点操作）、传输中的数据（如网络行为）和静态存储中的数据（如数据存储）。DLP功能旨在检测并防止NSS信息的未授权使用和传输。”**. 在中国，DLP的”官方性”体现为行业标准或业界公认的阐述。例如，在通信行业，有中华人民共和国工业和信息化部发布的行业标准《电信网数据泄露防护系统（DLP）技术要求》（YD/T 3735-2020），其中对DLP产品的功能、性能和安全提出了具体要求。这可以视为特定行业内的”官方技术要求”。而在行业共识层面，一种普遍认可的定义是：. #### 总得来说，DLP是一套用于识别、**监控、检测并阻止**敏感数据被非法传输、复制或泄露的技术解决方案。其核心理念是确保敏感数据无论处于**使用中（终端操作）**、**传输中（网络流量）**，还是**静态存储（服务器/数据库）**，都能得到有效保护，防止其违反组织的安全策略流出企业边界。简单来说，DLP的目标是实现“敏感数据可见、",
+      "retrieval_relevance_score": 0.533232,
+      "role_threshold": 0.54,
+      "source_class": "web",
+      "source_authority_score": 0.35,
+      "proxy_label_reasons": [
+        "term:data"
+      ],
+      "annotation": {
+        "relevance": "partially_relevant",
+        "source_quality": "low_quality_aggregator",
+        "should_retain": false,
+        "decision": "correct_rejection",
+        "confidence": 0.99,
+        "rationale": "与上一条为跨子域重复聚合内容，且只因泛词 data 命中，正确淘汰。",
+        "review_basis": "cached_title_and_content"
+      }
+    },
+    {
+      "annotation_id": "retrieval-gold-031",
+      "candidate_key": "live_complex_research_agent_001::scope_researcher::4",
+      "sample_id": "live_complex_research_agent_001",
+      "domain": "agentic_ai",
+      "question": "比较当前 Tavily、OpenAlex 与企业本地 RAG 作为深度研究 Agent 证据后端的能力、限制和时效性，核验官方资料，分析提示注入与引用污染风险、相反证据、成本权衡及多 Agent 实施建议。",
+      "role": "scope_researcher",
+      "retrieval_query": "比较当前 Tavily、OpenAlex 与企业本地 RAG 作为深度研究 Agent 证据后端的能力、限制和时效性，核验官方资料，分析提示注入与引用污染风险、相反证据、成本权衡及多 Agent 实施建议。 官方定义 术语 边界 适用范围",
+      "input_rank": 4,
+      "title": "Boost Your RAG Performance with Tavily Search API | by Minh Le Duc",
+      "url": "https://medium.com/@minhle_0210/boost-your-rag-performance-with-tavily-search-api-607a6437ab8e",
+      "source_type": "web",
+      "content_sha256": "8cfd1bf6cfd894cf23ff9d0119b7867e64295d63701719b320967e51e162d1ee",
+      "cached_excerpt": "To mitigate those issues, the ability to connect to reliable and up-to-date resources is essential. Using an additional tool to retrieve external knowledge can help RAG and LLMs access up-to-date information, mitigating hallucinations and enhancing factual accuracy. The Tavily Search API is suitable for that job. It is a search engine designed specifically for LLMs and RAG, with the goal of providing efficient, rapid, and permanent search results. Tavily specializes in improving search results for AI developers and autonomous AI agents. Furthermore, Tavily uses private financial, coding, news, and other internal data sources to supplement web content. As a result, Tavily empowers developers to build more accurate, insightful, and contextually aware AI applications. [...] Tavily is a search engine built from the ground up for AI models. Tavily’s developers understand the unique challenges faced by LLMs and RAG systems, and they’ve designed Tavily to be the ultimate solution. With a focus on speed, accuracy, and relevance, Tavily delivers search results tailored to AI applications. The platform handles the heavy lifting of data collection, filtering, and extraction, empowering us to ",
+      "retrieval_relevance_score": 0.441849,
+      "role_threshold": 0.58,
+      "source_class": "web",
+      "source_authority_score": 0.35,
+      "proxy_label_reasons": [
+        "term:search",
+        "term:API"
+      ],
+      "annotation": {
+        "relevance": "partially_relevant",
+        "source_quality": "community",
+        "should_retain": true,
+        "decision": "false_rejection",
+        "confidence": 0.9,
+        "rationale": "直接介绍 Tavily 作为 RAG/Agent 搜索后端的能力，可作为三后端比较中的单侧范围材料。",
+        "review_basis": "cached_title_and_content"
+      }
+    },
+    {
+      "annotation_id": "retrieval-gold-032",
+      "candidate_key": "live_complex_research_agent_001::scope_researcher::10",
+      "sample_id": "live_complex_research_agent_001",
+      "domain": "agentic_ai",
+      "question": "比较当前 Tavily、OpenAlex 与企业本地 RAG 作为深度研究 Agent 证据后端的能力、限制和时效性，核验官方资料，分析提示注入与引用污染风险、相反证据、成本权衡及多 Agent 实施建议。",
+      "role": "scope_researcher",
+      "retrieval_query": "比较当前 Tavily、OpenAlex 与企业本地 RAG 作为深度研究 Agent 证据后端的能力、限制和时效性，核验官方资料，分析提示注入与引用污染风险、相反证据、成本权衡及多 Agent 实施建议。 官方定义 术语 边界 适用范围",
+      "input_rank": 10,
+      "title": "开源 Agent 搜索方案深度调研报告",
+      "url": "https://zhuanlan.zhihu.com/p/2044522719912494796",
+      "source_type": "web",
+      "content_sha256": "c0db7f6903129dba5d7aefbbe51772f181543c0ceea59f320268d5e09cd7dbca",
+      "cached_excerpt": "Image 1) Image 2: ZhiHu logo — (35k stars) 2. SearXNG — xng (30.9k stars) 3. GPT-Researcher — 4. LangChain Open Deep Research — research 5. STORM — l/storm 6. DeerFlow — er-flow 7. Tongyi DeepResearch — 8. Morphic — ic (8.9k stars) 9. Agent-Reach — (20.7k stars) 10. Open-WebSearch — (1.3k stars) 11. Fireplexity — replexity (1.9k stars) 12. — MCP Server 生态目录 13. Exa — (2025 年融资 $85M) 14. Tavily — AI 原生搜索 API 15. Deep Research Bench — RACE 评分基准 发布于 2026-05-31 12:59・上海 ​赞同​​添加评论​收藏​喜欢 ​分享 ​申请转载​ ​ Image 5 未登录用户 还没有评论，发表第一个评论吧 []( 关于作者 Image 6: 不想写代码了 不想写代码了 AI 带路党 E/ACC ​ 南京航空航天大学 电磁场与微波技术硕士 回答 37文章 184关注者 269 ​关注​发私信 大家都在搜 换一换 多车队宣布永久退出中国 GT 430 万热 邓煜等菲奖得主称 AI 公司正摧毁数学 320 万热 星宇股份产业园被曝九成是临时工 303 万热 英三地领导人将共商民族自决权利 301 万热",
+      "retrieval_relevance_score": 0.513997,
+      "role_threshold": 0.58,
+      "source_class": "web",
+      "source_authority_score": 0.35,
+      "proxy_label_reasons": [
+        "term:search",
+        "term:API"
+      ],
+      "annotation": {
+        "relevance": "irrelevant",
+        "source_quality": "community_extraction_failed",
+        "should_retain": false,
+        "decision": "correct_rejection",
+        "confidence": 0.98,
+        "rationale": "缓存正文只有工具清单和页面噪声，没有可核验的能力、限制或比较内容。",
+        "review_basis": "cached_title_and_content"
+      }
+    },
+    {
+      "annotation_id": "retrieval-gold-033",
+      "candidate_key": "live_complex_research_agent_001::counter_researcher::9",
+      "sample_id": "live_complex_research_agent_001",
+      "domain": "agentic_ai",
+      "question": "比较当前 Tavily、OpenAlex 与企业本地 RAG 作为深度研究 Agent 证据后端的能力、限制和时效性，核验官方资料，分析提示注入与引用污染风险、相反证据、成本权衡及多 Agent 实施建议。",
+      "role": "counter_researcher",
+      "retrieval_query": "比较当前 Tavily、OpenAlex 与企业本地 RAG 作为深度研究 Agent 证据后端的能力、限制和时效性，核验官方资料，分析提示注入与引用污染风险、相反证据、成本权衡及多 Agent 实施建议。 反例 局限 失败案例 争议 相反证据",
+      "input_rank": 9,
+      "title": "开源Agent 搜索方案深度调研报告",
+      "url": "https://zhuanlan.zhihu.com/p/2044522719912494796",
+      "source_type": "web",
+      "content_sha256": "c0db7f6903129dba5d7aefbbe51772f181543c0ceea59f320268d5e09cd7dbca",
+      "cached_excerpt": "Image 1) Image 2: ZhiHu logo — (35k stars) 2. SearXNG — xng (30.9k stars) 3. GPT-Researcher — 4. LangChain Open Deep Research — research 5. STORM — l/storm 6. DeerFlow — er-flow 7. Tongyi DeepResearch — 8. Morphic — ic (8.9k stars) 9. Agent-Reach — (20.7k stars) 10. Open-WebSearch — (1.3k stars) 11. Fireplexity — replexity (1.9k stars) 12. — MCP Server 生态目录 13. Exa — (2025 年融资 $85M) 14. Tavily — AI 原生搜索 API 15. Deep Research Bench — RACE 评分基准 发布于 2026-05-31 12:59・上海 ​赞同​​添加评论​收藏​喜欢 ​分享 ​申请转载​ ​ Image 5 未登录用户 还没有评论，发表第一个评论吧 []( 关于作者 Image 6: 不想写代码了 不想写代码了 AI 带路党 E/ACC ​ 南京航空航天大学 电磁场与微波技术硕士 回答 37文章 184关注者 269 ​关注​发私信 大家都在搜 换一换 多车队宣布永久退出中国 GT 430 万热 邓煜等菲奖得主称 AI 公司正摧毁数学 320 万热 星宇股份产业园被曝九成是临时工 303 万热 英三地领导人将共商民族自决权利 301 万热",
+      "retrieval_relevance_score": 0.518862,
+      "role_threshold": 0.56,
+      "source_class": "web",
+      "source_authority_score": 0.35,
+      "proxy_label_reasons": [
+        "term:search",
+        "term:API"
+      ],
+      "annotation": {
+        "relevance": "irrelevant",
+        "source_quality": "community_extraction_failed",
+        "should_retain": false,
+        "decision": "correct_rejection",
+        "confidence": 0.98,
+        "rationale": "同一知乎页只返回工具清单，没有反例、限制、提示注入或引用污染证据。",
+        "review_basis": "cached_title_and_content"
+      }
+    }
+  ]
+}
