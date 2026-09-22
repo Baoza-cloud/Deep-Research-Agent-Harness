@@ -6,7 +6,7 @@
   "status": "adjudicated_gold",
   "description": "ResearchBench-Live 校准中 33 条 Proxy 误杀候选的正式人工审核集。",
   "source_run_id": "retrieval-calibration-20260916T145324Z",
-  "source_file": "/Users/baoza0628/Enterprise-LLM-RAG-Assistant/evaluation/results/retrieval_calibration/retrieval-calibration-20260916T145324Z.json",
+  "source_file": "evaluation/results/retrieval_calibration/retrieval-calibration-20260916T145324Z.json",
   "selection_rule": "proxy-relevant candidate removed by its calibrated role threshold",
   "annotation_protocol": {
     "relevance_labels": [
