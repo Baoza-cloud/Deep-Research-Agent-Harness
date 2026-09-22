@@ -1,0 +1,72 @@
+{
+  "freeze_id": "research-engine-20260921-v1",
+  "frozen_at": "2026-09-21T14:32:31+08:00",
+  "purpose": "ResearchBench-Frozen fixed_harness vs dynamic_swarm formal 35x3 experiment",
+  "source_control_note": "The pre-experiment workspace was frozen by SHA-256; the packaged release is additionally anchored by the v1.0.0 Git tag.",
+  "gate": {
+    "artifact": "results/claim_repair_regression_v21/ablation-20260921T143231762488Z.json",
+    "artifact_sha256": "1e5ca9ea1834501aa3a9cb53170230d97445844321ca0da08ff9c65b6b8feba2",
+    "samples": 10,
+    "variants": 2,
+    "successful_runs": 20,
+    "completed_with_review_issues": 0,
+    "blocking_severity_gte_2": 0,
+    "remaining_severity_3": 0,
+    "minimum_claim_support_rate": 0.9090909090909091,
+    "red_claim_verifier_adjudications": 0,
+    "unit_tests": {
+      "passed": 112,
+      "failed": 0
+    }
+  },
+  "gate_comparison_dynamic_vs_fixed": {
+    "overall_quality_relative_change_percent": -0.8343026379098528,
+    "overall_quality_paired_delta_95_ci": [-0.021864801864801886, 0.0026666666666666284],
+    "citation_coverage_relative_change_percent": 0.0,
+    "key_fact_recall_relative_change_percent": 0.0,
+    "latency_relative_change_percent": -26.217431109094196,
+    "latency_paired_delta_seconds_95_ci": [-13.723189885891042, -0.39404653349483854],
+    "llm_calls_relative_change_percent": -29.870129870129865,
+    "tokens_relative_change_percent": -33.7661820354511,
+    "cost_relative_change_percent": -29.165800081211437,
+    "worker_invocations_relative_change_percent": -36.58536585365854,
+    "worker_invocations_paired_delta_95_ci": [-7.5, -1.8]
+  },
+  "formal_experiment": {
+    "dataset": "datasets/researchbench_frozen_v1.0.json",
+    "dataset_sha256": "0eb1c0bda1e7a27869bdf053a9059cad0f87eacf549b08e7526d9d8f723884b2",
+    "questions": 35,
+    "repeats": 3,
+    "variants": ["fixed_harness", "dynamic_swarm"],
+    "provider": "deepseek",
+    "model": "deepseek-v4-flash",
+    "concurrency": 4,
+    "experiment_concurrency": 1,
+    "task_timeout_seconds": 45,
+    "global_timeout_seconds": 240,
+    "max_review_rounds": 4,
+    "min_citation_coverage": 0.8,
+    "min_claim_support_rate": 0.8,
+    "max_blue_patches": 20,
+    "max_patch_attempts": 2,
+    "bootstrap_samples": 2000,
+    "max_swarm_agents": 5,
+    "max_worker_invocations": 16,
+    "max_stagnant_review_rounds": 2,
+    "input_cost_per_million": 0.3,
+    "output_cost_per_million": 1.2
+  },
+  "sha256": {
+    "src/research_engine/claims.py": "3b1a0937cd085902f1f354321a851238455bb093888850a096329a36cf3f53e6",
+    "src/research_engine/adversarial.py": "b02364772611b6432dbbeacef6772e2fab6af72e556c17fd5a13e449604182ee",
+    "src/research_engine/text_quality.py": "a2aded876378a239c339cfced4fdeae48bad7ef50016f800cefeaadb8b78c3cc",
+    "src/research_engine/orchestrator.py": "3198296dfced97ff062418954056a7779c89721129bbdf45dd2914b341691d19",
+    "src/research_engine/swarm.py": "bb2eb501a3a8f733a07a71bb48a23e863e38dcab16925a9eb39f8bf3d6059d4c",
+    "src/research_engine/harness.py": "9787491770dc644d835ec4730a7409315b909d348314c84264d99245b40c6752",
+    "src/research_engine/config.py": "fd37d53b1339fccab46945130be1164b67631cbd2d26396bd28358b0abd8e2d5",
+    "src/research_engine/schemas.py": "b824437851c0c38e190c3be8abbd433556e0087534ab08961af6f041198f024e",
+    "evaluation/run_ablation_experiments.py": "90c2b4772deba9f56ede38b4c138218c08f081db94377cad5c7091b462c4b4e4",
+    "evaluation/research_evaluation.py": "025a8ce87ff316ab9a993d9d53b87f09a91057cd3c8105ff5847099ae36b2f5d",
+    "tests/test_research_engine.py": "1d23a174f5be618a6052d9818129f69466da6da9929c6d4987c3043fb825da2c"
+  }
+}

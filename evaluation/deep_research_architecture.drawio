@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="drawio" version="26.0.0">
+  <diagram name="Deep Research Architecture">
+    <mxGraphModel dx="1600" dy="1400" grid="1" gridSize="10" page="1" pageScale="1" pageWidth="1400" pageHeight="1600">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="2" value="规划层" style="swimlane;startSize=30;container=1;pointerEvents=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="300" y="40" width="800" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="3" value="用户研究问题" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="2">
+          <mxGeometry x="40" y="70" width="170" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="4" value="Lead Planner&#xa;结构化 JSON + 3 层解析 fallback" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="2">
+          <mxGeometry x="310" y="60" width="210" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="5" value="ResearchPlan DAG&#xa;依赖校验 + 环检测" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="2">
+          <mxGeometry x="590" y="70" width="170" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="6" value="执行与降级层" style="swimlane;startSize=30;container=1;pointerEvents=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="160" y="270" width="1080" height="270" as="geometry" />
+        </mxCell>
+        <mxCell id="7" value="Async DAG Orchestrator&#xa;9 状态机" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="6">
+          <mxGeometry x="440" y="50" width="200" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="8" value="asyncio.Semaphore&#xa;拓扑并发调度" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="6">
+          <mxGeometry x="440" y="160" width="200" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="9" value="Search Workers&#xa;企业 Hybrid RAG" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="6">
+          <mxGeometry x="720" y="160" width="180" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="10" value="三级降级策略&#xa;①单任务 timeout&#xa;②批量失败 replan&#xa;③全局 timeout 强制合成" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="6">
+          <mxGeometry x="60" y="140" width="250" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="11" value="LLM 后端&#xa;DeepSeek / MiMo / vLLM / OpenAI" style="rounded=1;dashed=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="6">
+          <mxGeometry x="720" y="50" width="270" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="12" value="共享记忆与上下文层" style="swimlane;startSize=30;container=1;pointerEvents=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="260" y="590" width="880" height="210" as="geometry" />
+        </mxCell>
+        <mxCell id="13" value="SQLite 共享记忆&#xa;+ 向量索引" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="12">
+          <mxGeometry x="70" y="70" width="170" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="14" value="写前治理&#xa;语义去重 + 矛盾检测&#xa;多策略消解" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="12">
+          <mxGeometry x="350" y="70" width="190" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="15" value="上下文压缩&#xa;L1 Embedding 粗过滤&#xa;L2 TextRank 细筛选&#xa;L3 Top 证据原文保留" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="12">
+          <mxGeometry x="630" y="60" width="210" height="110" as="geometry" />
+        </mxCell>
+
+        <mxCell id="16" value="生成与 Red-Blue 对抗层" style="swimlane;startSize=30;container=1;pointerEvents=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="250" y="850" width="900" height="240" as="geometry" />
+        </mxCell>
+        <mxCell id="17" value="Synthesizer&#xa;证据绑定引用" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="16">
+          <mxGeometry x="60" y="90" width="170" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="18" value="Red Agent&#xa;事实 / 逻辑 / 引用 / 完整性 / 不确定性" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="16">
+          <mxGeometry x="350" y="70" width="200" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="19" value="Blue Agent&#xa;ADD / DELETE / MODIFY / VERIFY" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="16">
+          <mxGeometry x="660" y="80" width="190" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="20" value="收敛 / 震荡检测" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="16">
+          <mxGeometry x="370" y="175" width="160" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="21" value="评测层" style="swimlane;startSize=30;container=1;pointerEvents=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="220" y="1140" width="960" height="210" as="geometry" />
+        </mxCell>
+        <mxCell id="22" value="规则指标&#xa;事实准确率 / 幻觉率&#xa;引用覆盖率 / 有效性" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="21">
+          <mxGeometry x="50" y="70" width="200" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="23" value="LLM-as-Judge&#xa;5 维评分" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="21">
+          <mxGeometry x="330" y="80" width="170" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="24" value="统计推断&#xa;Bootstrap 95% CI&#xa;Cohen&apos;s d" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="21">
+          <mxGeometry x="590" y="70" width="180" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="25" value="带证据、来源、轨迹、指标的最终报告" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;" vertex="1" parent="21">
+          <mxGeometry x="810" y="70" width="120" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="30" value="研究目标" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="3" target="4"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="31" value="生成 DAG" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="4" target="5"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="32" value="拓扑任务" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="5" target="7"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="33" value="调度" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="7" target="8"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="34" value="并发执行" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="8" target="9"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="35" value="失败事件" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;entryX=1;entryY=0.5;" edge="1" parent="1" source="8" target="10"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="36" value="动态 replan" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;exitX=0.5;exitY=0;entryX=0;entryY=0.5;" edge="1" parent="1" source="10" target="7"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="260" y="290" /><mxPoint x="690" y="290" /></Array></mxGeometry></mxCell>
+        <mxCell id="37" value="规划 / 合成 / 评审" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;exitX=0;exitY=0.5;entryX=1;entryY=0.5;" edge="1" parent="1" source="11" target="7"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="38" value="证据写入" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="9" target="14"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="39" value="去重后持久化" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;entryX=1;entryY=0.5;" edge="1" parent="1" source="14" target="13"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="40" value="L1 召回" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="13" target="15"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="41" value="压缩上下文" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="15" target="17"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="42" value="初稿" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="17" target="18"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="43" value="修复指令" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="18" target="19"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="44" value="再审" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;exitX=0.5;exitY=0;entryX=0.5;entryY=0;" edge="1" parent="1" source="19" target="18"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="1005" y="820" /><mxPoint x="700" y="820" /></Array></mxGeometry></mxCell>
+        <mxCell id="45" value="评分序列" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="18" target="20"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="46" value="通过 / 停止" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="20" target="22"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="47" value="同一报告" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="22" target="23"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="48" value="样本分数" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="23" target="24"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="49" value="评测结论" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="24" target="25"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="50" value="颜色图例" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#666666;verticalAlign=top;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="20" y="50" width="220" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="51" value="" style="rounded=0;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="50"><mxGeometry x="10" y="35" width="30" height="16" as="geometry" /></mxCell>
+        <mxCell id="52" value="服务 / 规划 / 规则" style="text;html=1;align=left;verticalAlign=middle;" vertex="1" parent="50"><mxGeometry x="50" y="32" width="150" height="22" as="geometry" /></mxCell>
+        <mxCell id="53" value="" style="rounded=0;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="50"><mxGeometry x="10" y="65" width="30" height="16" as="geometry" /></mxCell>
+        <mxCell id="54" value="存储 / 成功输出" style="text;html=1;align=left;verticalAlign=middle;" vertex="1" parent="50"><mxGeometry x="50" y="62" width="150" height="22" as="geometry" /></mxCell>
+        <mxCell id="55" value="" style="rounded=0;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="50"><mxGeometry x="10" y="95" width="30" height="16" as="geometry" /></mxCell>
+        <mxCell id="56" value="调度 / 决策 / 统计" style="text;html=1;align=left;verticalAlign=middle;" vertex="1" parent="50"><mxGeometry x="50" y="92" width="150" height="22" as="geometry" /></mxCell>
+        <mxCell id="57" value="" style="rounded=0;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="50"><mxGeometry x="10" y="125" width="30" height="16" as="geometry" /></mxCell>
+        <mxCell id="58" value="失败 / Red 攻击" style="text;html=1;align=left;verticalAlign=middle;" vertex="1" parent="50"><mxGeometry x="50" y="122" width="150" height="22" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

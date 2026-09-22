@@ -1,0 +1,47 @@
+{
+  "validated_at": "2026-09-22T14:21:58.641151+00:00",
+  "run_id": "ablation-20260922T135223799454Z",
+  "passed": true,
+  "gate": {
+    "expected_questions": 35,
+    "expected_repeats": 3,
+    "expected_rows_per_variant": 105,
+    "min_citation_coverage": 0.8,
+    "min_claim_support_rate": 0.8,
+    "accepted_statuses": [
+      "completed",
+      "completed_with_evidence_gaps"
+    ],
+    "severe_issue_threshold": 2
+  },
+  "variants": {
+    "fixed_harness": {
+      "rows": 105,
+      "failed_rows": 0,
+      "minimum_citation_coverage": 1.0,
+      "minimum_claim_support_rate": 1.0,
+      "blocking_review_issues": 0,
+      "claim_conflicts": 0,
+      "severe_red_issues": 0,
+      "cost_quality_overrides": 0
+    },
+    "dynamic_swarm": {
+      "rows": 105,
+      "failed_rows": 0,
+      "minimum_citation_coverage": 1.0,
+      "minimum_claim_support_rate": 1.0,
+      "blocking_review_issues": 0,
+      "claim_conflicts": 0,
+      "severe_red_issues": 0,
+      "cost_quality_overrides": 0
+    }
+  },
+  "status_counts": {
+    "completed_with_evidence_gaps": 197,
+    "completed": 13
+  },
+  "error_count": 0,
+  "warning_count": 0,
+  "errors": [],
+  "warnings": []
+}
