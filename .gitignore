@@ -3,6 +3,8 @@
 # Environment variables
 # =========================
 .env
+.env.*
+!.env.example
 
 
 # =========================
@@ -11,6 +13,14 @@
 __pycache__/
 *.pyc
 *.pyo
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
 
 
 # =========================
@@ -24,6 +34,7 @@ venv/
 # PyCharm
 # =========================
 .idea/
+.run/
 
 
 # =========================
@@ -45,3 +56,39 @@ embedding/*.index
 embedding/*.pkl
 # Local embedding model
 embedding/model/
+
+
+# =========================
+# Local runtime state
+# =========================
+*.sqlite
+*.sqlite3
+*.sqlite3-*
+*.db
+*.db-*
+*.log
+
+
+# =========================
+# Deep Research generated results
+# =========================
+evaluation/results/*
+!evaluation/results/README.md
+!evaluation/results/formal_frozen_v1_35x3/
+evaluation/results/formal_frozen_v1_35x3/*
+!evaluation/results/formal_frozen_v1_35x3/ablation-20260922T135223799454Z.json
+!evaluation/results/formal_frozen_v1_35x3/ablation-20260922T135223799454Z-quality-gate.json
+!evaluation/results/formal_frozen_v1_35x3/ablation-20260922T135223799454Z-quality-gate.md
+!evaluation/results/formal_frozen_v1_35x3/ablation-20260922T135223799454Z-summary.md
+!evaluation/results/frozen_release_20260921_v1/
+evaluation/results/frozen_release_20260921_v1/*
+!evaluation/results/frozen_release_20260921_v1/freeze-manifest.json
+!evaluation/results/frozen_release_20260921_v1/formal-run-launch.json
+!evaluation/results/adversarial/
+evaluation/results/adversarial/*
+!evaluation/results/adversarial/adversarial-20260916T031514890111Z.md
+!evaluation/results/adversarial/adversarial-20260916T065323635595Z-vs-adversarial-20260916T024120075281Z.md
+
+# Superseded benchmark seed sets (v1.0 is versioned below).
+evaluation/datasets/researchbench_frozen_v0.1.json
+evaluation/datasets/researchbench_live_v0.1.json
