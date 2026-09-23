@@ -1,11 +1,11 @@
-# Deep Research Harness 技术说明
+# Deep Research Agent Harness 技术说明
 
 ## 1. 系统边界
 
-本项目由本地 Hybrid RAG 与 Deep Research Harness 两层组成：
+本项目以 Deep Research Agent Harness 为核心，本地 Hybrid RAG 是可插拔检索后端之一：
 
-- **本地 Hybrid RAG**：文档解析、Chunk、Embedding、FAISS、BM25、RRF、相关性过滤、Context 和来源输出。
 - **Deep Research Harness**：DAG 规划、动态角色编组、并发和预算控制、共享记忆、证据验证、Red/Blue 修复、失败恢复和评测。
+- **本地 Hybrid RAG**：文档解析、Chunk、Embedding、FAISS、BM25、RRF、相关性过滤、Context 和来源输出；既可独立运行，也可注册为 Harness 的 Retrieval Backend。
 
 Harness 通过 `LocalHybridSearchBackend` 复用现有本地检索，也可以使用 `TavilySearchBackend`，或通过 `CompositeSearchBackend` 并发执行本地、Web、论文类检索工具并用加权 RRF 融合。编排器只依赖统一的 `RetrievalTool` 契约，不与具体检索实现绑定。
 
