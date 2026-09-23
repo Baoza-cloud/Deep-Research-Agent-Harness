@@ -1,230 +1,342 @@
-# Enterprise-LLM-RAG-Assistant
+# Enterprise LLM RAG & Deep Research Harness
 
-> 新增：基于现有 Hybrid RAG 的 Deep Research Agent Harness，覆盖动态 Swarm 编组与预算控制、DAG 规划与异步执行、共享记忆、Claim–Evidence Ledger、结构化 Red/Blue 对抗修复和三层评测。详见 [Deep Research Agent](docs/DEEP_RESEARCH_AGENT.md)。
+[![offline-ci](https://github.com/Baoza-cloud/Enterprise-LLM-RAG-Assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/Baoza-cloud/Enterprise-LLM-RAG-Assistant/actions/workflows/ci.yml)
 
-ResearchBench 已拆分为 Frozen、Adversarial 与 Live 三条 Track；Frozen v1.0 覆盖 11 领域/35 题，Adversarial v0.1 从同一题集确定性注入 140 个带 gold ID 的引用、事实与完整性缺陷，可分别评测 Red 检出率、Blue 修复率、误修率与回滚正确率。
+一个同时覆盖企业本地知识库问答与多 Agent 深度研究的工程化项目。项目不是两套彼此独立的 Demo，而是共享同一检索基础设施的两层系统：本地 Hybrid RAG 负责可靠召回，Deep Research Harness 在其上增加规划、动态角色编组、预算控制、证据验证、对抗修复和可复现评测。
 
-heuristic-v4 的正式 Fixed Harness vs Dynamic Swarm 对照已完成：35 题 × 3 次、两组共 210 次执行，运行异常、阻塞 Red 问题与 Claim 冲突均为 0。Dynamic 的综合质量差异不显著（Δ -0.13 个百分点，95% CI [-0.34, +0.07]，paired Cohen's dz=-0.20），Worker 调用稳定降低 16.39%（95% CI 10.39%–22.13%）；LLM 调用、估算 Token、成本与平均延迟的点估计分别降低 7.64%、8.12%、7.09% 和 5.45%，但这些效率指标的置信区间跨 0，不宣称显著改善。详见[正式 35×3 对照摘要](evaluation/results/formal_frozen_v1_35x3/ablation-20260922T135223799454Z-summary.md)与[严格质量门禁](evaluation/results/formal_frozen_v1_35x3/ablation-20260922T135223799454Z-quality-gate.md)。
+## 项目定位
 
-35 题 × 3 次 DeepSeek 正式在线对抗实验已完成：四个变体共 420 份报告全部成功。当前安全版本加入确定性 uncertainty ADD、整行 high-severity factual DELETE、citation-only DELETE 拒绝与未知引用支持验证后，Structured Patch Blue 的保守字符串 fault repair 从 86.43% 提升到 99.29%（配对 Δ +12.86 个百分点，题目级 Bootstrap 95% CI：+10.00–+15.71），规则事实准确率从 97.34% 提升到 100%（95% CI：+0.97–+4.64），规则幻觉率降至 0；事实与引用保留率均为 100%，collateral damage 为 0。剩余字符串未命中主要是“并非错误结论”这类安全否定式纠正，不再通过子串删除追求虚假的 100%。详见 [正式四变体实验](evaluation/results/adversarial/adversarial-20260916T031514890111Z.md)和[当前安全版本前后对照](evaluation/results/adversarial/adversarial-20260916T065323635595Z-vs-adversarial-20260916T024120075281Z.md)。
+项目包含两个互补部分：
 
-## 安装与运行
+| 部分 | 解决的问题 | 核心实现 |
+|---|---|---|
+| 本地 Hybrid RAG | 从企业私有文档中检索并生成带来源的回答 | 文档解析、Chunk、Embedding、FAISS、BM25、RRF、相关性过滤、引用输出 |
+| Deep Research Harness | 对复杂问题执行多步骤、可审计、受预算约束的深度研究 | DAG Planner、9 状态任务机、Dynamic Swarm、共享记忆、Claim–Evidence Ledger、Red/Blue Patch、质量门禁 |
 
-项目采用标准 `src-layout`。在项目根目录执行一次可编辑安装：
+本地 RAG 没有被推翻。它通过 `LocalHybridSearchBackend` 作为 Harness 的 `retrieval` 工具继续复用；同一运行也可以并行使用 Tavily Web 检索，再通过 RRF 合并本地与 Web 证据。
+
+## 为什么采用 Harness / Swarm
+
+普通 LangChain Agent 通常以“模型选择工具—观察结果—继续调用”的开放循环为中心，适合快速搭建工具调用原型。本项目关注的是可控执行和可验证研究，因此把关键决策显式放到程序层：
+
+| 维度 | 常见 LangChain Agent | 本项目 Harness / Swarm |
+|---|---|---|
+| 工作流 | 运行时由模型驱动的工具循环 | 先生成并校验 DAG，再按拓扑执行 |
+| 生命周期 | 主要关注消息与工具调用 | 9 状态任务机记录完整转换 |
+| 并发 | 依赖框架执行器 | `asyncio + Semaphore` 明确控制并发 |
+| 角色 | 多为固定角色或固定图 | 按复杂度动态选择 1/3/5 个角色 |
+| 预算 | 常以最大步数限制 | 同时约束 Worker、replan、验证查询、评审轮次和时间 |
+| 质量控制 | 依赖最终提示词或 Judge | Claim–Evidence 逐句对齐、冲突检测和硬门禁 |
+| 修复 | 常整篇重新生成 | `ADD / DELETE / MODIFY / VERIFY` 结构化 Patch，程序确定性应用 |
+| 失败处理 | 重试或直接终止 | 单任务降级、批量失败 replan、全局超时强制合成 |
+| 可复现性 | Trace 依赖具体框架 | 冻结数据、运行清单、哈希、成对 Bootstrap 和断点续跑 |
+
+Harness 不是另一个 Agent 框架封装，而是一组最小契约：`AgentSpec` 描述角色和能力，`RunContext` 隔离单次运行，`ToolRegistry` 管理工具，`AgentRuntime` 决定本地或远程执行。替换模型、检索后端或 Runtime 时，不需要重写编排和评测。
+
+## 系统架构
+
+```mermaid
+flowchart TB
+    Q["研究问题"] --> P["Planner<br/>结构化 DAG + 校验"]
+    P --> S["SwarmPolicy + BudgetController<br/>复杂度分级与 1/3/5 角色编组"]
+    S --> O["Async DAG Orchestrator<br/>9 状态机 + Semaphore"]
+
+    O --> W["Role-aware Workers<br/>Scope / Evidence / Counter / Impact / Verifier"]
+    W --> LR["本地 Hybrid RAG<br/>Dense + BM25 + RRF"]
+    W --> WEB["Tavily Web Search"]
+    LR --> RF["检索质量管线<br/>相关性 / 权威度 / URL 与同域去重"]
+    WEB --> RF
+
+    RF --> M["SQLite 共享记忆<br/>去重 / 矛盾检测 / 上下文压缩"]
+    M --> SY["Synthesizer<br/>证据绑定生成"]
+    SY --> CV["Claim–Evidence Verifier<br/>完整 / 部分 / 冲突 / 缺失"]
+    CV --> RED["Red Review<br/>事实 / 推断 / 引用 / 完整性"]
+    RED --> BLUE["Structured Patch Blue<br/>ADD / DELETE / MODIFY / VERIFY"]
+    BLUE --> CV
+
+    CV --> G{"最终质量护栏"}
+    G -->|"通过"| R["带引用、Ledger、Trace 和成本的报告"]
+    G -->|"Dynamic 降质"| F["Fixed Harness fallback"]
+    F --> R
+
+    R --> E["ResearchBench Evaluation<br/>规则指标 + Judge + Bootstrap 95% CI + Cohen's dz"]
+```
+
+可编辑源图位于 [`evaluation/deep_research_architecture.drawio`](evaluation/deep_research_architecture.drawio)。
+
+## 快速开始
+
+### 1. 安装
 
 ```bash
+git clone https://github.com/Baoza-cloud/Enterprise-LLM-RAG-Assistant.git
+cd Enterprise-LLM-RAG-Assistant
 python3 -m pip install -e .
 ```
 
-如需复用原有 Dense + BM25 + RRF 本地检索，再安装本地 RAG 可选依赖：
+如需运行原有本地 Dense + BM25 + RRF 检索：
 
 ```bash
 python3 -m pip install -e ".[local-rag]"
 ```
 
-安装后可使用任一正式入口：
+### 2. 配置 DeepSeek 与 Tavily
 
 ```bash
-deep-research "什么是 RAG？" --offline
-python3 -m research_engine "什么是 RAG？" --offline
+cp .env.example .env
 ```
 
-`src/research_engine/` 下除 `__main__.py` 外均为包内模块，不应使用
-`python src/research_engine/agents.py` 等方式逐文件运行。IDE 中也应将启动目标配置为模块
-`research_engine`，避免破坏相对导入上下文；个人 IDE 运行配置不纳入版本控制。
+在 `.env` 中填写：
 
+```dotenv
+DEEPSEEK_API_KEY=your_deepseek_key
+DEEPSEEK_MODEL=deepseek-v4-flash
+DEEPSEEK_BASE_URL=https://api.deepseek.com
+TAVILY_API_KEY=your_tavily_key
+```
 
-## 1. 项目简介
+`.env`、SQLite 记忆库和本地索引均被 Git 忽略。也可以使用隐藏输入配置 Tavily：
 
-本项目旨在构建一个企业级大语言模型知识库问答系统。
+```bash
+python3 evaluation/configure_tavily.py
+```
 
-针对大语言模型存在的以下问题：
+### 3. 一键运行
 
-- 知识更新困难
-- 无法直接访问企业私有数据
-- 容易产生幻觉（Hallucination）
+只验证完整流水线，不调用模型、Web 或本地索引：
 
-本项目结合：
+```bash
+python3 -m research_engine \
+  "解释 RAG 的核心流程" \
+  --offline \
+  --search-provider fixture
+```
 
-- RAG（Retrieval-Augmented Generation，检索增强生成）
-- Embedding向量检索
-- FAISS向量数据库
-- LoRA参数高效微调
+`fixture` 是固定内置证据，只用于安装检查和 CI，不用于评测研究质量。
 
-实现一个基于企业文档知识库的智能问答系统。
+使用 DeepSeek 与本地知识库：
 
----
+```bash
+python3 -m research_engine \
+  "公司远程办公政策的适用范围、风险和改进建议是什么？" \
+  --provider deepseek \
+  --model deepseek-v4-flash \
+  --search-provider local \
+  --output evaluation/research_result.json
+```
 
-## 2. 项目目标
+使用 DeepSeek 与 Tavily：
 
-实现一个完整的大模型应用流程：
+```bash
+python3 -m research_engine \
+  "对比 Kubernetes HPA 与 VPA 的适用场景和限制" \
+  --provider deepseek \
+  --model deepseek-v4-flash \
+  --search-provider tavily \
+  --web-search-depth advanced \
+  --output evaluation/research_result_web.json
+```
 
-用户问题
+同时检索本地知识库和 Web：
 
-↓
+```bash
+python3 -m research_engine "研究问题" \
+  --provider deepseek \
+  --search-provider hybrid-web \
+  --local-weight 1.2 \
+  --web-weight 1.0
+```
 
-问题理解
+原有本地 RAG 流水线可独立运行：
 
-↓
+```bash
+PYTHONPATH=src python3 src/rag_pipeline.py
+```
 
-知识库检索
+`research_engine` 使用包内相对导入。请从仓库根目录执行 `python3 -m research_engine` 或安装后的 `deep-research` 命令，不要直接运行 `src/research_engine/*.py`，否则会出现 `attempted relative import with no known parent package`。
 
-↓
+## 两条执行链路
 
-相关文档召回
-
-↓
-
-大语言模型生成答案
-
-↓
-
-返回带来源的回答
-
-
-最终实现：
-
-- 企业文档问答
-- 私有知识库检索
-- 降低模型幻觉
-- 支持知识动态更新
-
-
----
-
-## 3. 技术路线
-
-
-原始企业文档
-
-↓
-
-PDF/文本解析
-
-↓
-
-文本清洗
-
-↓
-
-Chunk切分
-
-↓
-
-Embedding向量化
-
-↓
-
-FAISS建立索引
-
-↓
-
-Retriever检索
-
-↓
-
-Prompt构造
-
-↓
-
-LLM生成
-
-↓
-
-LoRA微调优化
-
-
----
-
-## 4. 技术栈
-
-
-### 编程语言
-
-Python
-
-
-### 深度学习框架
-
-PyTorch
-
-
-### 大模型相关
-
-- Transformers
-- Qwen
-- PEFT(LoRA)
-
-
-### RAG相关
-
-- LangChain
-- FAISS
-- BGE Embedding
-
-
-### 部署
-
-- Streamlit
-
-
----
-
-## 5. 项目开发阶段
-
-
-### Phase 1：基础RAG系统
-
-完成：
-
-- PDF文档读取
-- 文本切分
-- Embedding
-- 向量数据库
-- 相似度检索
-- LLM回答
-
-
-### Phase 2：RAG优化
-
-增加：
-
-- Hybrid Search
-- BM25检索
-- Rerank模型
-- Prompt优化
-
-
-### Phase 3：模型微调
-
-使用：
-
-LoRA + SFT
-
-优化模型对于特定领域问题的回答能力。
-
-
-### Phase 4：系统评估与部署
-
-包括：
-
-- 检索效果评估
-- 回答质量评估
-- Web Demo
-
-
----
-
-## 6. 项目结构
+### 本地 Hybrid RAG
 
 ```text
-Enterprise-LLM-RAG-Assistant
+企业文档 → 文本清洗与切分 → Embedding / FAISS
+                         └→ BM25
+Dense 与 BM25 排名 → RRF 融合 → 相关性过滤 → Context → Answer + Sources
+```
 
-├── data
-├── src
-├── retrieval
-├── finetuning
-├── evaluation
-├── deployment
-├── scripts
-└── docs
+当没有足够相关的 Chunk 时，流水线返回明确的证据不足结果，不强制生成答案。
+
+### Deep Research Harness
+
+1. Planner 生成结构化研究 DAG，并执行依赖与环检测。
+2. SwarmPolicy 根据任务复杂度选择角色、并发和预算。
+3. Orchestrator 按拓扑并发执行检索任务，失败时触发三级降级。
+4. 检索结果经过相关性、来源权威度、URL、全文和同域近重复过滤。
+5. 证据写入 SQLite 共享记忆，并进行去重、矛盾检测和三级上下文压缩。
+6. Synthesizer 生成初稿；Verifier 建立逐句 Claim–Evidence Ledger。
+7. Red 分类问题，Blue 返回结构化 Patch，由程序确定性修改报告。
+8. 最终质量护栏比较 Dynamic 与 Fixed 候选，质量下降时保留更可靠结果。
+
+## 数据集与评测 Track
+
+| 数据集 | 规模 | 用途 | 是否调用实时 Web |
+|---|---:|---|---:|
+| ResearchBench-Frozen v1.0 | 11 领域 / 35 题 | 冻结证据上的回归、消融和版本比较 | 否 |
+| ResearchBench-Adversarial v0.1 | 35 个 Case / 140 个 Gold Fault | Red 检出、Blue 修复、误修和回滚评测 | 否 |
+| ResearchBench-Live v1.0 | 15 题，三档复杂度各 5 题 | 真实检索、角色组合和 Web 漂移评测 | 是 |
+| Retrieval-Gold v1.0 | 33 条人工复核候选 | 六类角色检索阈值校准 | 使用已缓存候选 |
+
+数据集位于 [`evaluation/datasets/`](evaluation/datasets/)，SHA256 固定在 [`SHA256SUMS`](evaluation/datasets/SHA256SUMS)。Frozen 与 Live 不能混合统计：Frozen 负责可复现比较，Live 负责当前真实检索能力。
+
+## 四组基线与 Blue 消融
+
+| 变体 | Planner / DAG | Red Review | Blue 策略 | 目的 |
+|---|---:|---:|---|---|
+| `single_agent` | 单任务 | 否 | 无 | 最小单 Agent 基线 |
+| `no_red_blue` | 多任务 DAG | 否 | 无 | 测量规划与多任务本身的收益 |
+| `rewrite_blue` | 多任务 DAG | 是 | 整篇重写 | 对照自由生成式修复 |
+| `structured_patch_blue` | 多任务 DAG | 是 | 结构化 Patch + 验证 + 回滚 | 验证确定性局部修复 |
+
+在此基础上，`fixed_harness` 与 `dynamic_swarm` 使用相同 Structured Patch Blue：前者固定单一 Worker 和预算，后者按复杂度动态选择角色、并发、调用预算和停止条件，用于隔离 SwarmPolicy 的贡献。
+
+运行消融：
+
+```bash
+PYTHONPATH=src python3 evaluation/run_ablation_experiments.py \
+  --provider deepseek \
+  --model deepseek-v4-flash \
+  --variants single_agent no_red_blue rewrite_blue structured_patch_blue \
+  --repeats 3 \
+  --experiment-concurrency 1 \
+  --bootstrap-samples 10000
+```
+
+## 正式实验结果
+
+### Fixed Harness vs Dynamic Swarm
+
+ResearchBench-Frozen v1.0，35 题 × 3 次，两组共 210 次有效运行：
+
+| 指标 | Fixed Harness | Dynamic Swarm | Dynamic 相对变化 |
+|---|---:|---:|---:|
+| 综合质量 | 99.68% | 99.55% | -0.13 pp |
+| 事实准确率 | 98.40% | 98.07% | -0.33 pp |
+| 引用覆盖率 | 100.00% | 100.00% | 持平 |
+| Worker 调用/题 | 11.56 | 9.67 | -16.39% |
+| LLM 调用/题 | 7.60 | 7.02 | -7.64% |
+| 估算 Token/题 | 14,799 | 13,596 | -8.12% |
+| 估算成本/题 | $0.009098 | $0.008453 | -7.09% |
+| 平均延迟 | 26.15s | 24.72s | -5.45% |
+
+综合质量差异未达显著：Δ=-0.13 pp，95% CI [-0.34, +0.07] pp，paired Cohen's dz=-0.20。Worker 调用降低 16.39%，95% CI 10.39%–22.13%；其余效率指标点估计下降，但区间跨 0，因此不宣称显著改善。
+
+正式产物：
+
+- [统计摘要](evaluation/results/formal_frozen_v1_35x3/ablation-20260922T135223799454Z-summary.md)
+- [严格质量门禁](evaluation/results/formal_frozen_v1_35x3/ablation-20260922T135223799454Z-quality-gate.md)
+- [冻结与恢复记录](evaluation/results/frozen_release_20260921_v1/formal-run-launch.json)
+
+### Red / Blue 对抗实验
+
+ResearchBench-Adversarial v0.1，35 题 × 3 次：
+
+| 变体 | Red 检出率 | Fault 修复率 | 事实准确率 | 幻觉率 | 引用覆盖率 |
+|---|---:|---:|---:|---:|---:|
+| Corrupted，无修复 | 99.29% | 0.00% | 24.88% | 75.12% | 50.40% |
+| Rewrite Blue | 99.29% | 99.76% | 95.50% | 4.50% | 97.90% |
+| Structured Patch Blue | 99.29% | 99.29% | 97.95% | 2.05% | 99.06% |
+| Oracle Clean | 99.29% | 100.00% | 100.00% | 0.00% | 100.00% |
+
+安全增强后的 Structured Patch 定向复跑将保守字符串修复率从 86.43% 提升到 99.29%，事实准确率提升到 100%，且干净事实、引用保留率均为 100%。详见[正式四变体报告](evaluation/results/adversarial/adversarial-20260916T031514890111Z.md)与[安全版本前后对照](evaluation/results/adversarial/adversarial-20260916T065323635595Z-vs-adversarial-20260916T024120075281Z.md)。
+
+## 失败恢复与安全机制
+
+- **单任务超时**：`timed_out → degraded`，保留已有证据继续下游任务。
+- **批量失败**：达到失败比例阈值后动态 replan，并拒绝冲突或成环节点。
+- **全局超时**：取消未完成任务，使用已持久化证据强制合成，状态为 `partial_timeout`。
+- **断点续跑**：按 `pair_key` 复用成功样本，校验数据集 SHA、模型、重复次数和 Policy 兼容性。
+- **检索安全**：网页正文按不可信数据处理，检测并脱敏指令覆盖、密钥窃取和工具调用型 Prompt Injection。
+- **Patch 安全**：拒绝未知 Evidence ID、歧义 target、非法 DELETE、无效替换和超限增长；验证失败自动回滚。
+- **Claim 质量门禁**：检测时间、数值、实体冲突；低支持率时定向补证据、降低表述强度或删除陈述。
+- **Dynamic 质量护栏**：引用或 Claim 支持率不足时生成 Fixed 候选，比较后保留质量更高者，成本不能覆盖质量下降。
+
+完成状态分为：`completed`、`completed_with_evidence_gaps`、`completed_with_review_issues` 和 `partial_timeout`，避免把诚实的证据缺口与事实错误混为一类。
+
+## 可复现性
+
+参考环境固定为 CPython 3.12.7，版本见 [`.python-version`](.python-version)；CI 的直接与传递依赖固定在 [`requirements.lock`](requirements.lock)。`pyproject.toml` 仍声明项目支持 Python 3.10 及以上，但正式回归以锁定环境为准。
+
+在全新虚拟环境中执行最小可复现流程：
+
+```bash
+# 安装与 CI 完全相同的依赖
+python3 -m pip install -r requirements.lock
+python3 -m pip install --no-deps -e .
+
+# 验证模块入口
+python3 -m research_engine --help
+
+# 运行现有 112 项离线测试
+python3 -m pytest -q tests/test_research_engine.py
+
+# 零 Key、零网络、零本地索引 smoke test
+python3 scripts/offline_smoke.py
+
+# 校验数据集
+cd evaluation/datasets && shasum -a 256 -c SHA256SUMS && cd ../..
+
+# 复验正式 35×3 产物
+python3 evaluation/validate_formal_ablation.py \
+  evaluation/results/formal_frozen_v1_35x3/ablation-20260922T135223799454Z.json \
+  --dataset evaluation/datasets/researchbench_frozen_v1.0.json
+```
+
+GitHub Actions 配置位于 [`.github/workflows/ci.yml`](.github/workflows/ci.yml)，在 Pull Request、`main` 分支推送和手动触发时执行上述入口检查、112 项测试与离线 smoke。CI 不运行在线检索，避免使用仓库 Secret 和产生调用费用。
+
+在线示例需要用户自行复制 `.env.example` 并填写 DeepSeek 与 Tavily Key：
+
+```bash
+cp .env.example .env
+python3 -m research_engine \
+  "比较 RAG 与长上下文方案的适用边界" \
+  --provider deepseek \
+  --model deepseek-v4-flash \
+  --search-provider tavily \
+  --web-search-depth advanced \
+  --output evaluation/research_result_web.json
+```
+
+该在线命令不会在 CI 中执行；`.env` 已被 Git 忽略。
+
+正式实验固定数据集 SHA、模型、费率、并发、超时、随机重复与 Bootstrap 口径。三次重复先在题内聚合，再以 35 道题作为独立单位进行配对 Bootstrap。
+
+## 项目限制
+
+- Frozen 每题使用单条冻结证据，适合比较编排、修复与成本，不代表开放 Web 的完整召回能力。
+- Live 评测会受搜索索引、网页内容和时间变化影响，不能与 Frozen 指标直接合并。
+- Retrieval-Gold 来自被过滤候选切片，不是总体检索 Precision/Recall 的无偏估计。
+- Token 和美元成本是可审计估算值，不等同于供应商实际账单；正式报告必须注明费率场景。
+- OpenAlex 已覆盖真实检索与评测；当前通过统一 Web/Composite 契约接入，跨来源论文版本合并、引用图快照和撤稿状态仍依赖上游元数据。
+- 本地 RAG 需要预先构建 FAISS、BM25 数据和可用的 Embedding 模型。
+
+## 项目结构
+
+```text
+Enterprise-LLM-RAG-Assistant/
+├── src/
+│   ├── rag_pipeline.py              # 本地 Hybrid RAG
+│   ├── hybrid_retrieval.py          # Dense + BM25 + RRF
+│   └── research_engine/             # Harness / Swarm / Red-Blue / Memory
+├── evaluation/
+│   ├── datasets/                    # Frozen / Live / Adversarial / Gold
+│   ├── results/                     # 精选正式产物
+│   ├── run_ablation_experiments.py
+│   └── validate_formal_ablation.py
+├── tests/test_research_engine.py
+├── docs/DEEP_RESEARCH_AGENT.md
+├── .env.example
+└── pyproject.toml
+```
+
+更详细的实现、阈值校准与评测协议见[技术文档](docs/DEEP_RESEARCH_AGENT.md)。
