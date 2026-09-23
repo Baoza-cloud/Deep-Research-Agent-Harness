@@ -5,9 +5,7 @@ from __future__ import annotations
 import re
 
 
-_BRACKETED_OMISSION = re.compile(
-    r"(?:\[|【)\s*(?:\.{3,}|…+|⋯+|。{3,})\s*(?:\]|】)"
-)
+_BRACKETED_OMISSION = re.compile(r"(?:\[|【)\s*(?:\.{3,}|…+|⋯+|。{3,})\s*(?:\]|】)")
 
 
 _EVIDENCE_BOUND_REWRITES: tuple[tuple[re.Pattern[str], str], ...] = (
@@ -21,9 +19,7 @@ _EVIDENCE_BOUND_REWRITES: tuple[tuple[re.Pattern[str], str], ...] = (
         "除以 √d_k 后",
     ),
     (
-        re.compile(
-            r"缩放因子(?:是|为)\s*(?:√\s*d_k|\\sqrt\s*\{\s*d_k\s*\})"
-        ),
+        re.compile(r"缩放因子(?:是|为)\s*(?:√\s*d_k|\\sqrt\s*\{\s*d_k\s*\})"),
         "缩放因子为 1/√d_k",
     ),
     # A source that only describes architecture does not establish a causal
@@ -73,8 +69,7 @@ _EVIDENCE_BOUND_REWRITES: tuple[tuple[re.Pattern[str], str], ...] = (
             r"消费者扩容的(?:有效)?上限由分区数决定[，,]\s*"
             r"消费者数超过分区数时会出现空闲实例"
         ),
-        "消费者数超过分区数时会出现空闲实例；"
-        "现有证据不支持将分区数外推为唯一扩容上限",
+        "消费者数超过分区数时会出现空闲实例；现有证据不支持将分区数外推为唯一扩容上限",
     ),
     (
         re.compile(r"这是扩容的(?:直接)?工程上限表现"),
@@ -85,15 +80,11 @@ _EVIDENCE_BOUND_REWRITES: tuple[tuple[re.Pattern[str], str], ...] = (
             r"单组内有效并行消费的上限与可分配分区数直接相关[，,]\s*"
             r"超出部分不会带来该组内的并行消费增益"
         ),
-        "消费者数超过分区数时会出现空闲实例；"
-        "现有证据不支持将其外推为唯一或硬性工程上限",
+        "消费者数超过分区数时会出现空闲实例；现有证据不支持将其外推为唯一或硬性工程上限",
     ),
     (
-        re.compile(
-            r"扩容消费者的(?:直接|有效|工程)?上限与(?:主题)?分区(?:数量|数)相关"
-        ),
-        "消费者数超过分区数时会出现空闲实例；"
-        "现有证据不支持将分区数表述为唯一或硬性扩容上限",
+        re.compile(r"扩容消费者的(?:直接|有效|工程)?上限与(?:主题)?分区(?:数量|数)相关"),
+        "消费者数超过分区数时会出现空闲实例；现有证据不支持将分区数表述为唯一或硬性扩容上限",
     ),
     (
         re.compile(
@@ -110,9 +101,7 @@ _EVIDENCE_BOUND_REWRITES: tuple[tuple[re.Pattern[str], str], ...] = (
         r"\1多头注意力的已证实事实（不等同于序列并行机制）",
     ),
     (
-        re.compile(
-            r"\*\*(\d+[.)、]\s*)关于[“\"]并行建模序列[”\"]的直接证据[。.]?\*\*"
-        ),
+        re.compile(r"\*\*(\d+[.)、]\s*)关于[“\"]并行建模序列[”\"]的直接证据[。.]?\*\*"),
         r"**\1当前证据的覆盖边界**",
     ),
     (
@@ -129,9 +118,7 @@ _EVIDENCE_BOUND_REWRITES: tuple[tuple[re.Pattern[str], str], ...] = (
         "该要求同时包含与目的相关、限于实现目的所必需范围两项表述",
     ),
     (
-        re.compile(
-            r"这意味着合规不仅要求实质遵守[，,]还要求控制者具备证明合规的能力[。.]?"
-        ),
+        re.compile(r"这意味着合规不仅要求实质遵守[，,]还要求控制者具备证明合规的能力[。.]?"),
         "",
     ),
 )

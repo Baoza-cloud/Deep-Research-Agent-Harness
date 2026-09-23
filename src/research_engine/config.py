@@ -54,9 +54,7 @@ class ResearchConfig:
         if not 0 <= self.min_claim_support_rate <= 1:
             raise ValueError("min_claim_support_rate must be between 0 and 1")
         if not 0 <= self.dynamic_claim_support_drop_tolerance <= 1:
-            raise ValueError(
-                "dynamic_claim_support_drop_tolerance must be between 0 and 1"
-            )
+            raise ValueError("dynamic_claim_support_drop_tolerance must be between 0 and 1")
         if self.max_swarm_agents < 1:
             raise ValueError("max_swarm_agents must be >= 1")
         if self.max_worker_invocations < 1:

@@ -84,9 +84,7 @@ def render(rows: Sequence[dict[str, Any]], json_path: Path) -> str:
     lines.extend(["", "## 角色行为", ""])
     for row in rows:
         configured = ", ".join(row["configured_roles"])
-        invoked = ", ".join(
-            f"{role}×{count}" for role, count in row["invoked_roles"].items()
-        )
+        invoked = ", ".join(f"{role}×{count}" for role, count in row["invoked_roles"].items())
         lines.extend(
             [
                 f"### {row['level']}",
@@ -126,9 +124,7 @@ def main() -> int:
     args = parser.parse_args()
     rows = sorted(
         (summarize_result(path) for path in args.results),
-        key=lambda row: {"simple": 0, "standard": 1, "complex": 2}.get(
-            str(row["level"]), 99
-        ),
+        key=lambda row: {"simple": 0, "standard": 1, "complex": 2}.get(str(row["level"]), 99),
     )
     json_path = args.output_prefix.with_suffix(".json")
     markdown_path = args.output_prefix.with_suffix(".md")

@@ -72,9 +72,7 @@ def analyze(
 
     for variant, rows in grouped.items():
         status = Counter(str(row.get("status", "unknown")) for row in rows)
-        issue_rows = [
-            row for row in rows if row.get("status") == "completed_with_review_issues"
-        ]
+        issue_rows = [row for row in rows if row.get("status") == "completed_with_review_issues"]
         reasons: Counter[str] = Counter()
         gates: Counter[str] = Counter()
         stops: Counter[str] = Counter()
@@ -250,9 +248,7 @@ def main() -> None:
     stem = f"completed-review-issues-{result.get('source_run_id') or args.artifact.stem}"
     json_path = args.output_dir / f"{stem}.json"
     md_path = args.output_dir / f"{stem}.md"
-    json_path.write_text(
-        json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-    )
+    json_path.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     md_path.write_text(render_markdown(result), encoding="utf-8")
     print(json_path)
     print(md_path)

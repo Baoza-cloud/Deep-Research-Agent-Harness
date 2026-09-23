@@ -75,7 +75,9 @@ class SwarmPlan:
         task_text = f"{task.subtask_id} {task.kind} {task.question}".lower()
         if task.subtask_id.startswith("verify_"):
             preferred = "evidence_verifier"
-        elif any(token in task_text for token in ("alternative", "counter", "反方", "反例", "限制")):
+        elif any(
+            token in task_text for token in ("alternative", "counter", "反方", "反例", "限制")
+        ):
             preferred = "counter_researcher"
         elif any(token in task_text for token in ("implication", "risk", "影响", "风险", "建议")):
             preferred = "impact_analyst"
@@ -165,8 +167,7 @@ class HeuristicSwarmPolicy:
                 max_replans=config.max_replans,
                 max_review_rounds=config.max_review_rounds,
                 max_verification_queries=(
-                    config.max_verification_queries_per_round
-                    * config.max_review_rounds
+                    config.max_verification_queries_per_round * config.max_review_rounds
                 ),
                 max_elapsed_seconds=config.global_timeout_seconds,
                 diminishing_returns_patience=config.max_stagnant_review_rounds,
@@ -207,9 +208,7 @@ class HeuristicSwarmPolicy:
             level = ComplexityLevel.COMPLEX
             desired_concurrency = 5
             review_rounds = config.max_review_rounds
-            verification_queries = (
-                config.max_verification_queries_per_round * review_rounds
-            )
+            verification_queries = config.max_verification_queries_per_round * review_rounds
             invocation_headroom = 10
             elapsed_fraction = 1.0
             evidence_stagnation_patience = 3
@@ -226,8 +225,7 @@ class HeuristicSwarmPolicy:
         max_review_rounds = min(config.max_review_rounds, review_rounds)
         max_verification_queries = min(
             verification_queries,
-            config.max_verification_queries_per_round
-            * max(0, max_review_rounds - 1),
+            config.max_verification_queries_per_round * max(0, max_review_rounds - 1),
         )
         return SwarmPlan(
             level=level,
@@ -394,11 +392,7 @@ class BudgetController:
             else (1.0 if quality_gate_passed else 0.0)
         )
         cost_ratio = max(
-            (
-                self.used[name] / limit
-                for name, limit in self.limits.items()
-                if limit > 0
-            ),
+            (self.used[name] / limit for name, limit in self.limits.items() if limit > 0),
             default=0.0,
         )
         time_ratio = min(1.0, self.elapsed_seconds / self.swarm.max_elapsed_seconds)
@@ -416,10 +410,7 @@ class BudgetController:
             # Utility rewards Red/Claim quality while charging for consumed
             # calls (proxy cost) and wall-clock budget. Diminishing-return
             # stopping therefore cannot optimize call count in isolation.
-            improvement = (
-                self.quality_utility_scores[-1]
-                - self.quality_utility_scores[-2]
-            )
+            improvement = self.quality_utility_scores[-1] - self.quality_utility_scores[-2]
             if improvement < self.swarm.min_score_improvement:
                 self._stagnant_reviews += 1
             else:
@@ -427,13 +418,11 @@ class BudgetController:
             if (
                 quality_gate_passed
                 and not any(
-                    issue.category
-                    in {"factual_error", "inference_overreach", "citation_error"}
+                    issue.category in {"factual_error", "inference_overreach", "citation_error"}
                     and issue.severity > 1
                     for issue in review.structured_issues
                 )
-                and self._stagnant_reviews
-                >= self.swarm.diminishing_returns_patience
+                and self._stagnant_reviews >= self.swarm.diminishing_returns_patience
             ):
                 return self.mark_stop("diminishing_returns")
         return None
@@ -502,10 +491,7 @@ class BudgetController:
         return {
             "limits": limits,
             "used": dict(self.used),
-            "remaining": {
-                name: max(0, limit - self.used[name])
-                for name, limit in limits.items()
-            },
+            "remaining": {name: max(0, limit - self.used[name]) for name, limit in limits.items()},
             "exhausted": sorted(self.exhausted),
             "stop_reasons": list(self.stop_reasons),
             "review_scores": list(self.review_scores),

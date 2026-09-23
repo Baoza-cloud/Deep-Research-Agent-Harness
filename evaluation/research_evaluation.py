@@ -37,11 +37,7 @@ def _tokens(text: str) -> set[str]:
 
 
 def _claims(report: str) -> list[Any]:
-    return [
-        item
-        for item in extract_claims(report, min_chars=6)
-        if is_reviewable_claim(item)
-    ]
+    return [item for item in extract_claims(report, min_chars=6) if is_reviewable_claim(item)]
 
 
 @dataclass
@@ -164,8 +160,7 @@ def evaluate_expectations(report: str, sample: dict[str, Any]) -> BenchmarkMetri
         minimum = int(fact.get("minimum_hits", len(terms)))
         rule_matched = sum(term in lowered for term in terms) >= minimum
         semantic_matched = (
-            sum(_semantic_term_present(report, term, fact) for term in terms)
-            >= minimum
+            sum(_semantic_term_present(report, term, fact) for term in terms) >= minimum
         )
         rule_hits += int(rule_matched)
         semantic_hits += int(semantic_matched)
@@ -174,18 +169,12 @@ def evaluate_expectations(report: str, sample: dict[str, Any]) -> BenchmarkMetri
     forbidden_hits = [item for item in forbidden if item.casefold() in lowered]
     return BenchmarkMetrics(
         key_fact_recall=combined_hits / len(key_facts) if key_facts else 1.0,
-        forbidden_claim_rate=(
-            len(forbidden_hits) / len(forbidden) if forbidden else 0.0
-        ),
+        forbidden_claim_rate=(len(forbidden_hits) / len(forbidden) if forbidden else 0.0),
         key_facts_hit=combined_hits,
         key_facts_total=len(key_facts),
         forbidden_terms_hit=forbidden_hits,
-        rule_key_fact_recall=(
-            rule_hits / len(key_facts) if key_facts else 1.0
-        ),
-        semantic_key_fact_recall=(
-            semantic_hits / len(key_facts) if key_facts else 1.0
-        ),
+        rule_key_fact_recall=(rule_hits / len(key_facts) if key_facts else 1.0),
+        semantic_key_fact_recall=(semantic_hits / len(key_facts) if key_facts else 1.0),
         rule_key_facts_hit=rule_hits,
         semantic_key_facts_hit=semantic_hits,
     )
@@ -236,10 +225,7 @@ def bootstrap_ci(
     if not values:
         raise ValueError("bootstrap_ci requires at least one value")
     rng = random.Random(seed)
-    means = sorted(
-        statistics.fmean(rng.choice(values) for _ in values)
-        for _ in range(samples)
-    )
+    means = sorted(statistics.fmean(rng.choice(values) for _ in values) for _ in range(samples))
     alpha = (1.0 - confidence) / 2.0
     lower = means[max(0, int(alpha * samples))]
     upper = means[min(samples - 1, int((1.0 - alpha) * samples) - 1)]

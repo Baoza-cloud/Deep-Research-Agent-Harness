@@ -87,9 +87,7 @@ def build_clean_report(sample: dict[str, Any]) -> str:
             findings.append(f"{_ensure_terminal(sentence)} [{evidence_id}]")
     return (
         f"# {sample['question']}\n\n"
-        "## 关键发现\n"
-        + "\n".join(findings)
-        + "\n\n## 局限与不确定性\n"
+        "## 关键发现\n" + "\n".join(findings) + "\n\n## 局限与不确定性\n"
         "不确定性说明。"
     )
 
@@ -104,19 +102,16 @@ def inject_faults(sample: dict[str, Any]) -> AdversarialCase:
 
     first_sentence = _sentences(str(sample["evidence"][0]["content"]))[0]
     uncited_target = "\n".join(
-        f"补充说明{index}：{_ensure_terminal(first_sentence)}"
-        for index in range(1, 4)
+        f"补充说明{index}：{_ensure_terminal(first_sentence)}" for index in range(1, 4)
     )
-    unsupported_target = _ensure_terminal(
-        str(sample.get("forbidden_terms", ["该结论保证绝对成立"])[0])
-    ) + f" [{evidence_id}]"
+    unsupported_target = (
+        _ensure_terminal(str(sample.get("forbidden_terms", ["该结论保证绝对成立"])[0]))
+        + f" [{evidence_id}]"
+    )
     insertion = f"{uncited_target}\n{unsupported_target}\n\n"
     corrupted = corrupted.replace("## 局限与不确定性", insertion + "## 局限与不确定性", 1)
 
-    limitation_block = (
-        "## 局限与不确定性\n"
-        "不确定性说明。"
-    )
+    limitation_block = "## 局限与不确定性\n不确定性说明。"
     corrupted = corrupted.replace(limitation_block, "")
     faults = (
         InjectedFault(
@@ -190,7 +185,10 @@ def _fault_detected(fault: InjectedFault, review: ReviewResult | None) -> bool:
     ):
         return True
     if fault.fault_type is FaultType.UNSUPPORTED_CLAIM:
-        normalize = lambda value: re.sub(r"[^0-9a-z\u4e00-\u9fff]+", "", value.casefold())
+
+        def normalize(value: str) -> str:
+            return re.sub(r"[^0-9a-z\u4e00-\u9fff]+", "", value.casefold())
+
         target = normalize(fault.target)
         return any(
             item.dimension == "factuality"
@@ -215,14 +213,10 @@ def evaluate_adversarial_report(
     repaired = tuple(
         fault.fault_id for fault in case.faults if _fault_repaired(fault, report, valid_ids)
     )
-    detected = tuple(
-        fault.fault_id for fault in case.faults if _fault_detected(fault, review)
-    )
+    detected = tuple(fault.fault_id for fault in case.faults if _fault_detected(fault, review))
     before = evaluate_expectations(case.clean_report, case.sample)
     after = evaluate_expectations(report, case.sample)
-    retention = (
-        after.key_facts_hit / before.key_facts_hit if before.key_facts_hit else 1.0
-    )
+    retention = after.key_facts_hit / before.key_facts_hit if before.key_facts_hit else 1.0
     retention = min(1.0, retention)
     rules = evaluate_rules(report, case.sample["evidence"])
     clean_citations = set(CITATION_PATTERN.findall(case.clean_report))
@@ -270,8 +264,7 @@ def aggregate_adversarial_metrics(
         "patch_acceptance_rate",
     )
     return {
-        name: statistics.fmean(float(getattr(row, name)) for row in rows)
-        for name in fields
+        name: statistics.fmean(float(getattr(row, name)) for row in rows) for name in fields
     } | {
         "applied_patch_count": float(sum(row.applied_patch_count for row in rows)),
         "rejected_patch_count": float(sum(row.rejected_patch_count for row in rows)),
@@ -286,10 +279,7 @@ def serialize_case(case: AdversarialCase) -> dict[str, Any]:
         "question": case.sample["question"],
         "clean_report": case.clean_report,
         "corrupted_report": case.corrupted_report,
-        "faults": [
-            {**asdict(item), "fault_type": item.fault_type.value}
-            for item in case.faults
-        ],
+        "faults": [{**asdict(item), "fault_type": item.fault_type.value} for item in case.faults],
     }
 
 
@@ -320,9 +310,8 @@ def evaluate_rollback_guard() -> dict[str, Any]:
     protected = [
         patch.patch_id
         for patch in attacks
-        if patch.patch_id in rejected_ids and patch.patch_id not in {
-            item.patch_id for item in result.applied
-        }
+        if patch.patch_id in rejected_ids
+        and patch.patch_id not in {item.patch_id for item in result.applied}
     ]
     return {
         "attack_count": len(attacks),
@@ -330,7 +319,5 @@ def evaluate_rollback_guard() -> dict[str, Any]:
         "applied_count": len(result.applied),
         "report_unchanged": result.report == report,
         "rollback_correctness": len(protected) / len(attacks),
-        "rejection_reasons": {
-            item.patch_id: item.reason for item in result.rejected
-        },
+        "rejection_reasons": {item.patch_id: item.reason for item in result.rejected},
     }

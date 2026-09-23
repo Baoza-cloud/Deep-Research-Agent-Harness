@@ -34,21 +34,15 @@ from .text_quality import normalize_evidence_bound_language
 
 
 CITATION_PATTERN = re.compile(r"\[([A-Za-z0-9_-]+-E\d+)\]")
-CITATION_ONLY_PATTERN = re.compile(
-    r"\s*(?:\[[A-Za-z0-9_-]+-E\d+\]\s*)+"
-)
+CITATION_ONLY_PATTERN = re.compile(r"\s*(?:\[[A-Za-z0-9_-]+-E\d+\]\s*)+")
 TOKEN_PATTERN = re.compile(r"[A-Za-z0-9_]+|[\u4e00-\u9fff]")
 # A citation placed immediately after sentence punctuation still belongs to that
 # sentence. Do not split it into an artificial standalone "claim".
-CLAIM_SPLIT = re.compile(
-    r"(?<=[。！？!?\.])\s+(?!\[[A-Za-z0-9_-]+-E\d+\])|\n+"
-)
+CLAIM_SPLIT = re.compile(r"(?<=[。！？!?\.])\s+(?!\[[A-Za-z0-9_-]+-E\d+\])|\n+")
 CODE_BLOCK = re.compile(r"```[\s\S]*?```")
 MARKDOWN_HEADING = re.compile(r"^\s*#{1,6}\s+(.+)$")
 NON_CLAIM_SECTION = re.compile(r"来源|证据索引|参考文献|证据目录")
-LIMITATION_HEADING = re.compile(
-    r"(?im)^#{2,6}\s+.*(?:局限|不确定|证据缺口)"
-)
+LIMITATION_HEADING = re.compile(r"(?im)^#{2,6}\s+.*(?:局限|不确定|证据缺口)")
 LIMITATION_DISCLOSURE = re.compile(
     r"(?:本报告|当前证据|证据范围).{0,24}"
     r"(?:局限|不确定|受限|有限|限制|未覆盖|证据不足|证据缺口)"
@@ -57,9 +51,7 @@ UNSUPPORTED_DELETE_REASON = re.compile(
     r"不支持|未支持|并未|冲突|矛盾|错误|证据错配|无依据|虚构|误导"
 )
 LIST_PREFIX = re.compile(r"^(?:[-+*]\s+|\d+[.)、]\s*)")
-ORPHAN_MARKDOWN_LINE = re.compile(
-    r"^(?:[-+]\s*|\*{1,2}\s*|\*{0,2}\d+[.)、]?\s*\*{0,2})$"
-)
+ORPHAN_MARKDOWN_LINE = re.compile(r"^(?:[-+]\s*|\*{1,2}\s*|\*{0,2}\d+[.)、]?\s*\*{0,2})$")
 EVIDENCE_GAP_MARKERS = (
     "基于当前证据，以下内容无法确认，已降级为待验证问题",
     "基于当前证据，该陈述仅获得部分支持，完整结论仍需验证",
@@ -111,9 +103,7 @@ def _preserve_list_prefix(target: str, replacement: str) -> str:
 
 def _remove_orphan_markdown_lines(report: str) -> str:
     lines = [
-        line
-        for line in report.splitlines()
-        if not ORPHAN_MARKDOWN_LINE.fullmatch(line.strip())
+        line for line in report.splitlines() if not ORPHAN_MARKDOWN_LINE.fullmatch(line.strip())
     ]
     return re.sub(r"\n{3,}", "\n\n", "\n".join(lines)).strip()
 
@@ -145,7 +135,7 @@ def _compact_evidence_gap_lines(report: str) -> tuple[str, int]:
                 if topic.startswith(marker):
                     topic = topic[len(marker) :]
                     break
-            topic = topic.strip(" ：:；;。‘’“”\"*")
+            topic = topic.strip(' ：:；;。‘’“”"*')
             if topic and topic not in topics:
                 topics.append(topic[:180])
         preview = "；".join(topics[:3]) or "本节相关结论"
@@ -154,8 +144,7 @@ def _compact_evidence_gap_lines(report: str) -> tuple[str, int]:
         first = indices[0]
         prefix = LIST_PREFIX.match(lines[first].strip())
         replacement = (
-            f"基于当前证据，本节有 {len(indices)} 项内容无法确认，"
-            f"已合并为待验证问题：{preview}。"
+            f"基于当前证据，本节有 {len(indices)} 项内容无法确认，已合并为待验证问题：{preview}。"
         )
         lines[first] = f"{prefix.group(0) if prefix else ''}{replacement}"
         for index in indices[1:]:
@@ -211,9 +200,7 @@ def _classify_issue(
 
 def _issue_fingerprint(issue: ReviewIssue) -> str:
     stable_subject = issue.target or issue.description
-    normalized = re.sub(
-        r"\W+", "", f"{issue.category}|{stable_subject}"
-    ).casefold()
+    normalized = re.sub(r"\W+", "", f"{issue.category}|{stable_subject}").casefold()
     return hashlib.sha256(normalized.encode("utf-8")).hexdigest()[:16]
 
 
@@ -236,12 +223,10 @@ def _attacks_future_validation_source(issue: ReviewIssue) -> bool:
         return False
     text = f"{issue.target or ''} {issue.description}"
     has_validation_context = any(
-        marker in text
-        for marker in ("建议与验证路径", "验证路径", "待验证", "未来验证")
+        marker in text for marker in ("建议与验证路径", "验证路径", "待验证", "未来验证")
     )
     has_research_action = any(
-        marker in text
-        for marker in ("查阅", "检索", "核查", "获取", "补充", "交叉验证")
+        marker in text for marker in ("查阅", "检索", "核查", "获取", "补充", "交叉验证")
     )
     alleges_missing_reference = any(
         marker in text
@@ -254,18 +239,14 @@ def is_blocking_review_issue(
     issue: ReviewIssue,
     max_allowed_severity: int = 1,
 ) -> bool:
-    return (
-        issue.category in BLOCKING_ISSUE_CATEGORIES
-        and issue.severity > max_allowed_severity
-    )
+    return issue.category in BLOCKING_ISSUE_CATEGORIES and issue.severity > max_allowed_severity
 
 
 def _has_limitations_section(report: str) -> bool:
     """Require epistemic disclosure, not topic limitations or title keywords."""
 
     return bool(
-        LIMITATION_HEADING.search(report)
-        or LIMITATION_DISCLOSURE.search(_reviewable_text(report))
+        LIMITATION_HEADING.search(report) or LIMITATION_DISCLOSURE.search(_reviewable_text(report))
     )
 
 
@@ -282,11 +263,7 @@ def _resolve_cited_delete_target(
     cited_ids = set(CITATION_PATTERN.findall(target))
     if cited_ids:
         exact_lines = [line for line in lines if line == target]
-        return (
-            (target, cited_ids)
-            if len(exact_lines) == 1 and cited_ids <= valid_ids
-            else None
-        )
+        return (target, cited_ids) if len(exact_lines) == 1 and cited_ids <= valid_ids else None
 
     matching_lines = [line for line in lines if line.startswith(target)]
     if len(matching_lines) != 1:
@@ -392,7 +369,7 @@ class RedTeamReviewer:
 已经明确写成“基于当前证据无法确认/仅部分支持/待验证问题”的内容是正常证据缺口，不得作为事实错误、引用错误或推断越界再次攻击。证据缺失归为 evidence_gap，写作结构与措辞建议归为 writing_advice；后二者不能伪装成事实错误。
 “建议与验证路径”中仅建议未来查阅、检索或核查的来源，不代表报告已经使用这些来源，也不要求把它们列入当前来源列表；不得因此判为 citation_error。
 证据目录：
-{evidence_context or '无证据'}
+{evidence_context or "无证据"}
 研究问题：{question}
 报告：
 {report}
@@ -480,9 +457,7 @@ class RedTeamReviewer:
                     deterministic.passed
                     and total >= self.pass_score
                     and not any(
-                        is_blocking_review_issue(
-                            item, self.max_pass_issue_severity
-                        )
+                        is_blocking_review_issue(item, self.max_pass_issue_severity)
                         for item in combined
                     )
                 ),
@@ -528,9 +503,7 @@ class RedTeamReviewer:
         }
         issues: list[ReviewIssue] = []
         if coverage < self.min_citation_coverage and evidences:
-            examples = "；".join(
-                re.sub(r"\s+", " ", claim)[:180] for claim in uncited_claims[:8]
-            )
+            examples = "；".join(re.sub(r"\s+", " ", claim)[:180] for claim in uncited_claims[:8])
             issues.append(
                 ReviewIssue(
                     "rule-citation-coverage",
@@ -587,8 +560,7 @@ class RedTeamReviewer:
                 total >= self.pass_score
                 and coverage >= self.min_citation_coverage
                 and not any(
-                    is_blocking_review_issue(item, self.max_pass_issue_severity)
-                    for item in issues
+                    is_blocking_review_issue(item, self.max_pass_issue_severity) for item in issues
                 )
             ),
             issues=[item.description for item in issues],
@@ -644,17 +616,13 @@ class BlueTeamRepairer:
         unsupported/contradicted. It never invents replacement facts.
         """
 
-        if (
-            self.verifier.llm is not None
-            and ledger.verification_mode != "semantic"
-        ):
+        if self.verifier.llm is not None and ledger.verification_mode != "semantic":
             return PatchApplicationResult(
                 report=report,
                 rejected=[
                     PatchRejection(
                         "AUTO-claim-generation",
-                        "semantic_verifier_unavailable:"
-                        + ledger.verification_mode,
+                        "semantic_verifier_unavailable:" + ledger.verification_mode,
                     )
                 ],
             )
@@ -688,30 +656,19 @@ class BlueTeamRepairer:
                 if not link.cited and link.verdict is SupportVerdict.SUPPORTED
             ]
             partial_links = [
-                link
-                for link in claim.links
-                if link.verdict is SupportVerdict.PARTIALLY_SUPPORTED
+                link for link in claim.links if link.verdict is SupportVerdict.PARTIALLY_SUPPORTED
             ]
             conflict_types = sorted(
-                {
-                    conflict
-                    for link in claim.links
-                    for conflict in link.conflict_types
-                }
+                {conflict for link in claim.links for conflict in link.conflict_types}
             )
             patch_id = f"AUTO-claim-{claim.claim_id}"
 
-            if (
-                claim.verdict is not SupportVerdict.CONTRADICTED
-                and supported_candidates
-            ):
+            if claim.verdict is not SupportVerdict.CONTRADICTED and supported_candidates:
                 evidence_ids = list(
                     dict.fromkeys(link.evidence_id for link in supported_candidates)
                 )[:2]
                 citation_suffix = " ".join(f"[{item}]" for item in evidence_ids)
-                uncited_target = re.sub(
-                    r"\s+", " ", CITATION_PATTERN.sub("", target)
-                ).strip()
+                uncited_target = re.sub(r"\s+", " ", CITATION_PATTERN.sub("", target)).strip()
                 replacement = f"{uncited_target} {citation_suffix}".strip()
                 patches.append(
                     ReportPatch(
@@ -719,24 +676,16 @@ class BlueTeamRepairer:
                         action=RepairAction.MODIFY,
                         target=target,
                         replacement=replacement,
-                        evidence_ids=sorted(
-                            set(CITATION_PATTERN.findall(replacement))
-                        ),
+                        evidence_ids=sorted(set(CITATION_PATTERN.findall(replacement))),
                         reason="Claim 对齐发现直接支持候选，程序补充相邻证据引用",
                     )
                 )
                 continue
 
-            if (
-                claim.verdict is SupportVerdict.PARTIALLY_SUPPORTED
-                or (
-                    claim.verdict is not SupportVerdict.CONTRADICTED
-                    and partial_links
-                )
+            if claim.verdict is SupportVerdict.PARTIALLY_SUPPORTED or (
+                claim.verdict is not SupportVerdict.CONTRADICTED and partial_links
             ):
-                evidence_ids = list(
-                    dict.fromkeys(link.evidence_id for link in partial_links)
-                )[:2]
+                evidence_ids = list(dict.fromkeys(link.evidence_id for link in partial_links))[:2]
                 citation_suffix = " ".join(f"[{item}]" for item in evidence_ids)
                 supported_aspects = list(
                     dict.fromkeys(
@@ -748,9 +697,7 @@ class BlueTeamRepairer:
                 )[:3]
                 replacement = "基于当前证据，该陈述仅获得部分支持，完整结论仍需验证"
                 if supported_aspects:
-                    replacement = "；".join(
-                        item.strip(" -*#\t。") for item in supported_aspects
-                    )
+                    replacement = "；".join(item.strip(" -*#\t。") for item in supported_aspects)
                 else:
                     replacement += "；未获直接支持的限定已从报告中移除"
                 if not replacement.endswith(("。", "！", "？", ".", "!", "?")):
@@ -784,10 +731,7 @@ class BlueTeamRepairer:
                 )
                 continue
 
-            gap_statement = (
-                "基于当前证据，以下内容无法确认，已降级为待验证问题："
-                f"“{claim.text}”"
-            )
+            gap_statement = f"基于当前证据，以下内容无法确认，已降级为待验证问题：“{claim.text}”"
             gap_statement = _preserve_list_prefix(target, gap_statement)
             patches.append(
                 ReportPatch(
@@ -802,9 +746,7 @@ class BlueTeamRepairer:
 
         result = self.apply_patches(report, patches, evidences)
         result.rejected = rejected + result.rejected
-        compacted_report, compacted_groups = _compact_evidence_gap_lines(
-            result.report
-        )
+        compacted_report, compacted_groups = _compact_evidence_gap_lines(result.report)
         if compacted_groups:
             result.report = compacted_report
             result.applied.append(
@@ -813,9 +755,7 @@ class BlueTeamRepairer:
                     action=RepairAction.MODIFY,
                     target="__MULTIPLE_EVIDENCE_GAPS__",
                     replacement="",
-                    reason=(
-                        f"程序按章节合并 {compacted_groups} 组重复证据缺口"
-                    ),
+                    reason=(f"程序按章节合并 {compacted_groups} 组重复证据缺口"),
                 )
             )
         return result
@@ -834,9 +774,7 @@ class BlueTeamRepairer:
         """Ask Blue for JSON edits, validate them, then edit the report in code."""
 
         model_issues = [
-            issue
-            for issue in review.structured_issues
-            if issue.issue_id != "rule-uncertainty"
+            issue for issue in review.structured_issues if issue.issue_id != "rule-uncertainty"
         ]
         if review.structured_issues and not model_issues:
             return self._ensure_uncertainty_disclosure(
@@ -855,13 +793,9 @@ class BlueTeamRepairer:
             result = self._apply_deterministic_factual_deletes(
                 PatchApplicationResult(report=report), review, evidences
             )
-            result = await self._repair_unknown_citations(
-                result, review, evidences
-            )
+            result = await self._repair_unknown_citations(result, review, evidences)
             result = self._ensure_uncertainty_disclosure(result, review, evidences)
-            result.rejected.append(
-                PatchRejection("generation", "blue_llm_unavailable")
-            )
+            result.rejected.append(PatchRejection("generation", "blue_llm_unavailable"))
             return result
 
         evidence_ids = {item.evidence_id for item in evidences}
@@ -907,11 +841,11 @@ class BlueTeamRepairer:
 10. 对 citation_error，不得给建议、标题或证据缺口添加装饰性引用；应删除其中的事实
     断言，或把直接受支持的事实拆成带相邻引用的独立短句。
 
-上次补丁拒绝原因：{_retry_feedback or '首次生成，无'}
+上次补丁拒绝原因：{_retry_feedback or "首次生成，无"}
 
 合法证据 ID：{sorted(evidence_ids)}
 证据目录：
-{_evidence_catalog(evidences) or '无证据'}
+{_evidence_catalog(evidences) or "无证据"}
 
 研究问题：{question}
 Red issues：{json.dumps(issue_payload, ensure_ascii=False)}
@@ -990,17 +924,15 @@ Red issues：{json.dumps(issue_payload, ensure_ascii=False)}
                     f"patch_limit_exceeded:{requested_count}>{self.max_patches}",
                 )
             )
-        validated, semantic_rejections, validation_ledgers = (
-            await self.verifier.validate_patches(parsed, evidences)
+        validated, semantic_rejections, validation_ledgers = await self.verifier.validate_patches(
+            parsed, evidences
         )
         result = self.apply_patches(report, validated, evidences)
         result.requested_count = requested_count
         result.rejected = rejected + semantic_rejections + result.rejected
         result.validation_ledgers = validation_ledgers
         if not result.changed and _attempt < self.max_generation_attempts:
-            feedback = "; ".join(
-                f"{item.patch_id}={item.reason}" for item in result.rejected[:12]
-            )
+            feedback = "; ".join(f"{item.patch_id}={item.reason}" for item in result.rejected[:12])
             retry = await self.repair(
                 question,
                 report,
@@ -1017,12 +949,8 @@ Red issues：{json.dumps(issue_payload, ensure_ascii=False)}
                 **retry.validation_ledgers,
             }
             return retry
-        result = self._apply_deterministic_factual_deletes(
-            result, review, evidences
-        )
-        result = self._apply_deterministic_inference_deletes(
-            result, review, evidences
-        )
+        result = self._apply_deterministic_factual_deletes(result, review, evidences)
+        result = self._apply_deterministic_inference_deletes(result, review, evidences)
         result = await self._repair_unknown_citations(result, review, evidences)
         return self._ensure_uncertainty_disclosure(result, review, evidences)
 
@@ -1044,11 +972,7 @@ Red issues：{json.dumps(issue_payload, ensure_ascii=False)}
         ]
         for unknown_id in unknown_ids:
             token = f"[{unknown_id}]"
-            matching_lines = [
-                line.strip()
-                for line in result.report.splitlines()
-                if token in line
-            ]
+            matching_lines = [line.strip() for line in result.report.splitlines() if token in line]
             if len(matching_lines) != 1:
                 continue
             target = matching_lines[0]
@@ -1058,11 +982,7 @@ Red issues：{json.dumps(issue_payload, ensure_ascii=False)}
             for evidence_id, evidence in evidence_map.items():
                 evidence_tokens = _tokens(evidence.content)
                 denominator = min(len(claim_tokens), len(evidence_tokens))
-                overlap = (
-                    len(claim_tokens & evidence_tokens) / denominator
-                    if denominator
-                    else 0.0
-                )
+                overlap = len(claim_tokens & evidence_tokens) / denominator if denominator else 0.0
                 scores.append((overlap, evidence_id))
             scores.sort(reverse=True)
             if not scores or scores[0][0] < 0.12:
@@ -1079,18 +999,14 @@ Red issues：{json.dumps(issue_payload, ensure_ascii=False)}
                 replacement=replacement,
                 evidence_ids=declared_ids,
                 issue_ids=issue_ids,
-                reason=(
-                    "程序仅在唯一词法候选通过 Claim–Evidence 验证后替换未知引用"
-                ),
+                reason=("程序仅在唯一词法候选通过 Claim–Evidence 验证后替换未知引用"),
             )
-            validated, semantic_rejections, ledgers = (
-                await self.verifier.validate_patches([patch], evidences)
+            validated, semantic_rejections, ledgers = await self.verifier.validate_patches(
+                [patch], evidences
             )
             result.rejected.extend(semantic_rejections)
             result.validation_ledgers.update(ledgers)
-            deterministic = self.apply_patches(
-                result.report, validated, evidences
-            )
+            deterministic = self.apply_patches(result.report, validated, evidences)
             result.report = deterministic.report
             result.requested_count += deterministic.requested_count
             result.applied.extend(deterministic.applied)
@@ -1118,9 +1034,7 @@ Red issues：{json.dumps(issue_payload, ensure_ascii=False)}
             if not raw_target:
                 continue
             exact = [
-                line.strip()
-                for line in result.report.splitlines()
-                if line.strip() == raw_target
+                line.strip() for line in result.report.splitlines() if line.strip() == raw_target
             ]
             target = exact[0] if len(exact) == 1 else ""
             if not target:
@@ -1131,11 +1045,7 @@ Red issues：{json.dumps(issue_payload, ensure_ascii=False)}
                 ]
                 if len(containing) == 1:
                     target = containing[0]
-            if (
-                not target
-                or target in handled
-                or result.report.count(target) != 1
-            ):
+            if not target or target in handled or result.report.count(target) != 1:
                 continue
             cited_ids = sorted(set(CITATION_PATTERN.findall(target)) & valid_ids)
             patch = ReportPatch(
@@ -1167,9 +1077,7 @@ Red issues：{json.dumps(issue_payload, ensure_ascii=False)}
         handled_targets: set[str] = set()
         for issue in review.structured_issues:
             raw_target = (issue.target or "").strip()
-            resolved = _resolve_cited_delete_target(
-                result.report, raw_target, valid_ids
-            )
+            resolved = _resolve_cited_delete_target(result.report, raw_target, valid_ids)
             target, cited_ids = resolved or ("", set())
             eligible = (
                 issue.action in {RepairAction.DELETE, RepairAction.MODIFY}
@@ -1214,8 +1122,7 @@ Red issues：{json.dumps(issue_payload, ensure_ascii=False)}
             (
                 item
                 for item in review.structured_issues
-                if item.issue_id == "rule-uncertainty"
-                and item.action is RepairAction.ADD
+                if item.issue_id == "rule-uncertainty" and item.action is RepairAction.ADD
             ),
             None,
         )
@@ -1285,13 +1192,15 @@ Red issues：{json.dumps(issue_payload, ensure_ascii=False)}
             if patch.action is RepairAction.DELETE and patch.replacement:
                 rejected.append(PatchRejection(patch.patch_id, "delete_replacement_must_be_empty"))
                 continue
-            if (
-                patch.action is RepairAction.DELETE
-                and CITATION_ONLY_PATTERN.fullmatch(patch.target)
+            if patch.action is RepairAction.DELETE and CITATION_ONLY_PATTERN.fullmatch(
+                patch.target
             ):
                 rejected.append(PatchRejection(patch.patch_id, "citation_only_delete_forbidden"))
                 continue
-            if patch.action in {RepairAction.MODIFY, RepairAction.ADD} and not patch.replacement.strip():
+            if (
+                patch.action in {RepairAction.MODIFY, RepairAction.ADD}
+                and not patch.replacement.strip()
+            ):
                 rejected.append(PatchRejection(patch.patch_id, "replacement_required"))
                 continue
 
@@ -1393,9 +1302,7 @@ Red issues：{json.dumps(issue_payload, ensure_ascii=False)}
         )
         # LLM patch rounds can occasionally leave the exact same heading or
         # paragraph twice with only a blank line between them.
-        duplicate_block = re.compile(
-            r"(?m)^(?P<block>[^\n]+)\n[ \t]*\n(?P=block)(?=\n|$)"
-        )
+        duplicate_block = re.compile(r"(?m)^(?P<block>[^\n]+)\n[ \t]*\n(?P=block)(?=\n|$)")
         while True:
             normalized, duplicate_count = duplicate_block.subn(
                 r"\g<block>",
@@ -1409,8 +1316,7 @@ Red issues：{json.dumps(issue_payload, ensure_ascii=False)}
         # decorative and misleading, even when the cited source is valid.
         for claim in extract_claims(normalized, min_chars=6):
             if not claim.citations or not (
-                is_action_guidance(claim.text)
-                or is_evidence_gap_disclosure(claim.text)
+                is_action_guidance(claim.text) or is_evidence_gap_disclosure(claim.text)
             ):
                 continue
             replacement_text = CITATION_PATTERN.sub("", claim.source_text)
@@ -1442,5 +1348,7 @@ class ReviewConvergence:
                 and not review.structured_issues
             )
         window = self.fingerprints[-self.oscillation_window :]
-        review.oscillating = len(window) >= 3 and any(count > 1 for count in Counter(window).values())
+        review.oscillating = len(window) >= 3 and any(
+            count > 1 for count in Counter(window).values()
+        )
         return review

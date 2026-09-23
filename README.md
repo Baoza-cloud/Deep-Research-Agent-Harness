@@ -1,6 +1,9 @@
 # Deep Research Agent Harness
 
 [![agent-harness-ci](https://github.com/Baoza-cloud/Deep-Research-Agent-Harness/actions/workflows/ci.yml/badge.svg)](https://github.com/Baoza-cloud/Deep-Research-Agent-Harness/actions/workflows/ci.yml)
+[![release](https://img.shields.io/github/v/release/Baoza-cloud/Deep-Research-Agent-Harness)](https://github.com/Baoza-cloud/Deep-Research-Agent-Harness/releases)
+[![license](https://img.shields.io/github/license/Baoza-cloud/Deep-Research-Agent-Harness)](LICENSE)
+[![python](https://img.shields.io/badge/python-3.10--3.12-blue)](pyproject.toml)
 
 一个面向复杂研究任务的 Agent Harness：以显式契约编排多角色 Worker，通过 DAG、动态 Swarm、预算控制、共享记忆、Claim–Evidence 验证、Red/Blue 修复和质量门禁生成可追溯报告。检索层可连接 Tavily、论文来源或现有本地 Hybrid RAG，但项目核心是可控、可验证、可评测的 Agent 运行机制，而不是单一 RAG 应用。
 
@@ -277,8 +280,8 @@ python3 -m pip install --no-deps -e .
 # 验证模块入口
 python3 -m research_engine --help
 
-# 运行现有 112 项离线测试
-python3 -m pytest -q tests/test_research_engine.py
+# 运行按子系统拆分的 112 项离线测试
+python3 -m pytest -q tests
 
 # 零 Key、零网络、零本地索引 smoke test
 python3 scripts/offline_smoke.py
@@ -289,10 +292,11 @@ cd evaluation/datasets && shasum -a 256 -c SHA256SUMS && cd ../..
 # 复验正式 35×3 产物
 python3 evaluation/validate_formal_ablation.py \
   evaluation/results/formal_frozen_v1_35x3/ablation-20260922T135223799454Z.json \
-  --dataset evaluation/datasets/researchbench_frozen_v1.0.json
+  --dataset evaluation/datasets/researchbench_frozen_v1.0.json \
+  --output-prefix /tmp/researchbench-frozen-v1.0-quality-gate
 ```
 
-GitHub Actions 配置位于 [`.github/workflows/ci.yml`](.github/workflows/ci.yml)，在 Pull Request、`main` 分支推送和手动触发时执行上述入口检查、112 项测试与离线 smoke。CI 不运行在线检索，避免使用仓库 Secret 和产生调用费用。
+GitHub Actions 配置位于 [`.github/workflows/ci.yml`](.github/workflows/ci.yml)，在 Pull Request、`main` 分支推送和手动触发时执行 Ruff、覆盖率、Python 3.10/3.11/3.12 兼容测试、wheel/sdist 构建、全新环境 wheel 安装、入口检查与离线 smoke。CI 不运行在线检索，避免使用仓库 Secret 和产生调用费用。
 
 在线示例需要用户自行复制 `.env.example` 并填写 DeepSeek 与 Tavily Key：
 
@@ -333,10 +337,20 @@ Deep-Research-Agent-Harness/
 │   ├── results/                     # 精选正式产物
 │   ├── run_ablation_experiments.py
 │   └── validate_formal_ablation.py
-├── tests/test_research_engine.py
+├── tests/                            # 按 Harness / Retrieval / Verifier 等领域拆分
+├── release/v1.1.0/SHA256SUMS         # 正式数据与实验产物哈希
 ├── docs/DEEP_RESEARCH_AGENT.md
 ├── .env.example
 └── pyproject.toml
 ```
 
 更详细的实现、阈值校准与评测协议见[技术文档](docs/DEEP_RESEARCH_AGENT.md)。
+
+## 发布与参与
+
+- 当前版本：`v1.1.0`
+- [版本记录](CHANGELOG.md)
+- [贡献指南](CONTRIBUTING.md)
+- [安全策略](SECURITY.md)
+- [MIT License](LICENSE)
+- [v1.1.0 可复现哈希](release/v1.1.0/SHA256SUMS)

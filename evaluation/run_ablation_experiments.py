@@ -160,8 +160,7 @@ def _reprice_row(
     prompt_tokens = float(usage.get("estimated_prompt_tokens", 0.0))
     completion_tokens = float(usage.get("estimated_completion_tokens", 0.0))
     usage["estimated_cost_usd"] = (
-        prompt_tokens * input_cost_per_million_usd
-        + completion_tokens * output_cost_per_million_usd
+        prompt_tokens * input_cost_per_million_usd + completion_tokens * output_cost_per_million_usd
     ) / 1_000_000
     return row
 
@@ -180,11 +179,7 @@ def _resume_row_is_compatible(variant: str, row: dict[str, Any]) -> bool:
     current_level = (
         "simple"
         if score < HeuristicSwarmPolicy.SIMPLE_THRESHOLD
-        else (
-            "standard"
-            if score < HeuristicSwarmPolicy.COMPLEX_THRESHOLD
-            else "complex"
-        )
+        else ("standard" if score < HeuristicSwarmPolicy.COMPLEX_THRESHOLD else "complex")
     )
     cached_level = swarm_plan.get("level")
     if cached_level != current_level:
@@ -262,9 +257,7 @@ class FrozenEvidenceWorker:
         )
         rows = await self.run(task)
         for evidence in rows:
-            evidence.metadata.update(
-                {"retrieval_query": query, "retrieval_role": spec.role}
-            )
+            evidence.metadata.update({"retrieval_query": query, "retrieval_role": spec.role})
         return rows
 
 
@@ -492,7 +485,9 @@ def _aggregate(rows: Sequence[dict[str, Any]], bootstrap_samples: int) -> dict[s
         "completion_chars": lambda row: row["llm_usage"]["completion_chars"],
         "estimated_total_tokens": lambda row: row["llm_usage"]["estimated_total_tokens"],
         "estimated_cost_usd": lambda row: row["llm_usage"]["estimated_cost_usd"],
-        "worker_invocations": lambda row: row["system_metrics"]["budget"]["used"]["worker_invocations"],
+        "worker_invocations": lambda row: row["system_metrics"]["budget"]["used"][
+            "worker_invocations"
+        ],
         "review_rounds": lambda row: row["system_metrics"]["budget"]["used"]["review_rounds"],
     }
     metrics: dict[str, Any] = {}
@@ -557,12 +552,8 @@ def _comparisons(
         "hallucination_rate": ("evaluation", "rules", "hallucination_rate"),
         "citation_coverage": ("evaluation", "rules", "citation_coverage"),
         "key_fact_recall": ("evaluation", "benchmark", "key_fact_recall"),
-        "rule_key_fact_recall": (
-            "evaluation", "benchmark", "rule_key_fact_recall"
-        ),
-        "semantic_key_fact_recall": (
-            "evaluation", "benchmark", "semantic_key_fact_recall"
-        ),
+        "rule_key_fact_recall": ("evaluation", "benchmark", "rule_key_fact_recall"),
+        "semantic_key_fact_recall": ("evaluation", "benchmark", "semantic_key_fact_recall"),
         "latency_seconds": ("latency_seconds",),
         "llm_calls": ("llm_usage", "llm_calls"),
         "estimated_total_tokens": ("llm_usage", "estimated_total_tokens"),
@@ -585,9 +576,7 @@ def _comparisons(
         if baseline_name not in variant_rows or candidate_name not in variant_rows:
             continue
         key = f"{candidate_name}_vs_{baseline_name}"
-        base_quality = question_metric(
-            variant_rows[baseline_name], metric_paths["overall_quality"]
-        )
+        base_quality = question_metric(variant_rows[baseline_name], metric_paths["overall_quality"])
         candidate_quality = question_metric(
             variant_rows[candidate_name], metric_paths["overall_quality"]
         )
@@ -611,9 +600,7 @@ def _comparisons(
                 "candidate_mean": statistics.fmean(candidate_values),
                 "paired_delta_mean": delta_mean,
                 "paired_delta_bootstrap_95_ci": [lower, upper],
-                "relative_change_percent": (
-                    100.0 * delta_mean / base_mean if base_mean else None
-                ),
+                "relative_change_percent": (100.0 * delta_mean / base_mean if base_mean else None),
                 "paired_cohens_dz": paired_cohens_d(base_values, candidate_values),
             }
         comparisons[key] = {
@@ -661,11 +648,7 @@ async def run(args: argparse.Namespace) -> Path:
         prior_success: dict[str, dict[str, Any]] = {}
         rejected_cached_rows = 0
         for resume_payload in resume_payloads:
-            for row in (
-                resume_payload.get("variants", {})
-                .get(variant, {})
-                .get("samples", [])
-            ):
+            for row in resume_payload.get("variants", {}).get(variant, {}).get("samples", []):
                 if "error" in row:
                     continue
                 if not _resume_row_is_compatible(variant, row):
@@ -772,11 +755,10 @@ async def run(args: argparse.Namespace) -> Path:
     output_dir.mkdir(parents=True, exist_ok=True)
     output_path = output_dir / f"{payload['run_id']}.json"
     output_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-    summary = {
-        variant: data["aggregate"]
-        for variant, data in payload["variants"].items()
-    }
-    print(json.dumps({"run_id": payload["run_id"], "summary": summary}, ensure_ascii=False, indent=2))
+    summary = {variant: data["aggregate"] for variant, data in payload["variants"].items()}
+    print(
+        json.dumps({"run_id": payload["run_id"], "summary": summary}, ensure_ascii=False, indent=2)
+    )
     print(f"result_file={output_path}")
     return output_path
 

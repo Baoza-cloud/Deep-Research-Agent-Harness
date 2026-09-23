@@ -203,9 +203,7 @@ class LocalAgentRuntime:
             raise RuntimeError("RunContext is bound to a different tool registry")
         missing = [name for name in spec.tool_names if not self.tools.contains(name)]
         if missing:
-            raise RuntimeError(
-                f"Agent {spec.agent_id} requires unregistered tools: {missing}"
-            )
+            raise RuntimeError(f"Agent {spec.agent_id} requires unregistered tools: {missing}")
         started_at = utc_now()
         invocation_id = getattr(payload, "subtask_id", None)
         context.emit(

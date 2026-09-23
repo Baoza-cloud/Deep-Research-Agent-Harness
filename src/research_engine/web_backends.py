@@ -14,8 +14,7 @@ from .harness import RetrievalTool
 def _domain_matches(url: str, allowed_domains: Sequence[str]) -> bool:
     host = (urlparse(url).hostname or "").lower().strip(".")
     return any(
-        host == domain.lower().strip(".")
-        or host.endswith("." + domain.lower().strip("."))
+        host == domain.lower().strip(".") or host.endswith("." + domain.lower().strip("."))
         for domain in allowed_domains
     )
 
@@ -42,9 +41,7 @@ class TavilySearchBackend:
             try:
                 from tavily import AsyncTavilyClient  # type: ignore[import-untyped]
             except ImportError as exc:
-                raise RuntimeError(
-                    "Tavily Web search requires: pip install tavily-python"
-                ) from exc
+                raise RuntimeError("Tavily Web search requires: pip install tavily-python") from exc
             resolved_key = api_key or os.getenv("TAVILY_API_KEY")
             if not resolved_key:
                 raise ValueError("Missing TAVILY_API_KEY")

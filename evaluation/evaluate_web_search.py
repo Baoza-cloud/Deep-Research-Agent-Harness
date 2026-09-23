@@ -45,8 +45,7 @@ def evaluate_sample(
     required_domains = [str(item) for item in sample.get("required_domains", [])]
     required_terms = [str(item) for item in sample.get("required_terms", [])]
     domain_hits = {
-        domain: any(_domain_matches(host, domain) for host in hosts)
-        for domain in required_domains
+        domain: any(_domain_matches(host, domain) for host in hosts) for domain in required_domains
     }
     term_hits = {term: term.lower() in searchable for term in required_terms}
     domain_recall = sum(domain_hits.values()) / len(domain_hits) if domain_hits else 1.0
@@ -94,9 +93,7 @@ async def run(args: argparse.Namespace) -> Path:
         backend = TavilySearchBackend(
             search_depth=args.search_depth,
             include_domains=(
-                sample.get("required_domains", [])
-                if args.enforce_required_domains
-                else None
+                sample.get("required_domains", []) if args.enforce_required_domains else None
             ),
         )
         started = time.perf_counter()
@@ -136,7 +133,16 @@ async def run(args: argparse.Namespace) -> Path:
     output_dir.mkdir(parents=True, exist_ok=True)
     output_path = output_dir / f"{payload['run_id']}.json"
     output_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(json.dumps({key: payload[key] for key in ("run_id", "total", "passed", "pass_rate", "mean_latency_seconds")}, ensure_ascii=False, indent=2))
+    print(
+        json.dumps(
+            {
+                key: payload[key]
+                for key in ("run_id", "total", "passed", "pass_rate", "mean_latency_seconds")
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
     print(f"result_file={output_path}")
     return output_path
 

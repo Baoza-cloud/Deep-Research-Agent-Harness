@@ -36,11 +36,7 @@ def _citation_coverage(row: dict[str, Any]) -> float:
     system = row.get("system_metrics") or {}
     if system.get("citation_coverage") is not None:
         return _number(system.get("citation_coverage"))
-    return _number(
-        ((row.get("evaluation") or {}).get("rules") or {}).get(
-            "citation_coverage"
-        )
-    )
+    return _number(((row.get("evaluation") or {}).get("rules") or {}).get("citation_coverage"))
 
 
 def _claim_support_rate(row: dict[str, Any]) -> float:
@@ -274,9 +270,7 @@ def validate(
                     )
                 )
 
-            if variant == "dynamic_swarm" and system.get(
-                "dynamic_quality_fallback_triggered"
-            ):
+            if variant == "dynamic_swarm" and system.get("dynamic_quality_fallback_triggered"):
                 candidates = system.get("dynamic_quality_candidates") or {}
                 chosen = (
                     "fixed_harness_fallback"
@@ -285,10 +279,8 @@ def validate(
                 )
                 chosen_metrics = candidates.get(chosen) or {}
                 if candidates and (
-                    _number(chosen_metrics.get("claim_support_rate"))
-                    < min_claim_support_rate
-                    or _number(chosen_metrics.get("citation_coverage"))
-                    < min_citation_coverage
+                    _number(chosen_metrics.get("claim_support_rate")) < min_claim_support_rate
+                    or _number(chosen_metrics.get("citation_coverage")) < min_citation_coverage
                     or int(chosen_metrics.get("blocking_issue_count") or 0) > 0
                 ):
                     errors.append(
@@ -372,9 +364,7 @@ def _markdown(report: dict[str, Any], result_path: Path) -> str:
     else:
         for item in report["errors"]:
             location = "/".join(
-                value
-                for value in (item.get("variant"), item.get("pair_key"))
-                if value
+                value for value in (item.get("variant"), item.get("pair_key")) if value
             )
             prefix = f" ({location})" if location else ""
             lines.append(f"- `{item['code']}`{prefix}：{item['message']}")
@@ -405,16 +395,22 @@ def main() -> int:
         min_citation_coverage=args.min_citation_coverage,
         min_claim_support_rate=args.min_claim_support_rate,
     )
-    prefix = args.output_prefix or args.result.with_name(
-        f"{args.result.stem}-quality-gate"
-    )
+    prefix = args.output_prefix or args.result.with_name(f"{args.result.stem}-quality-gate")
     json_path = prefix.with_suffix(".json")
     md_path = prefix.with_suffix(".md")
-    json_path.write_text(
-        json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
+    json_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     md_path.write_text(_markdown(report, args.result), encoding="utf-8")
-    print(json.dumps({"passed": report["passed"], "errors": report["error_count"], "json": str(json_path), "markdown": str(md_path)}, ensure_ascii=False))
+    print(
+        json.dumps(
+            {
+                "passed": report["passed"],
+                "errors": report["error_count"],
+                "json": str(json_path),
+                "markdown": str(md_path),
+            },
+            ensure_ascii=False,
+        )
+    )
     return 0 if report["passed"] else 1
 
 
