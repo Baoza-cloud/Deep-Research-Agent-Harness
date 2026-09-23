@@ -250,6 +250,8 @@ python3 evaluation/configure_tavily.py
 
 该工具把 Key 写入被忽略的 `evaluation/.env` 并设置权限 `600`。
 
+`fixture` 检索后端提供少量固定证据，只用于 CI 与安装 smoke。它不访问网络、不读取本地索引，也不能用于质量评测。
+
 ## 13. CLI 示例
 
 安装：
@@ -262,7 +264,9 @@ python3 -m pip install -e ".[local-rag]"  # 需要本地 RAG 时
 离线流水线：
 
 ```bash
-python3 -m research_engine "研究问题" --offline
+python3 -m research_engine "研究问题" \
+  --offline \
+  --search-provider fixture
 ```
 
 DeepSeek + Tavily：
@@ -357,8 +361,20 @@ ResearchBench-Frozen v1.0，35 题 × 3 次：
 
 ## 16. 可复现检查
 
+参考执行环境：
+
+- CPython 3.12.7：`.python-version`
+- 锁定依赖：`requirements.lock`
+- 自动化入口：`.github/workflows/ci.yml`
+
+全新虚拟环境中的最小流程：
+
 ```bash
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 -m pytest -q tests
+python3 -m pip install -r requirements.lock
+python3 -m pip install --no-deps -e .
+python3 -m research_engine --help
+python3 -m pytest -q tests/test_research_engine.py
+python3 scripts/offline_smoke.py
 
 cd evaluation/datasets
 shasum -a 256 -c SHA256SUMS
@@ -368,6 +384,8 @@ python3 evaluation/validate_formal_ablation.py \
   evaluation/results/formal_frozen_v1_35x3/ablation-20260922T135223799454Z.json \
   --dataset evaluation/datasets/researchbench_frozen_v1.0.json
 ```
+
+GitHub Actions 在 Pull Request、`main` 分支推送和手动触发时运行模块入口检查、112 项离线测试和零 Key smoke。在线 DeepSeek + Tavily 示例只在用户自行配置 `.env` 后手动运行，避免 CI 消耗额度或暴露凭据。
 
 正式实验固定数据集、模型、费率、并发、超时和重复次数。三次重复先在题内聚合，再以 35 道题为独立单位做配对 Bootstrap。
 

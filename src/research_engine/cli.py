@@ -17,7 +17,48 @@ from .planner import HeuristicPlanner, LLMPlanner
 from .web_backends import CompositeSearchBackend, TavilySearchBackend
 
 
+class OfflineFixtureSearchBackend:
+    """Deterministic evidence backend for CI and installation smoke tests."""
+
+    async def search(self, query: str, limit: int = 5) -> list[dict[str, object]]:
+        rows = [
+            {
+                "title": "Offline fixture: scope and definitions",
+                "content": (
+                    f"该离线固定证据用于验证研究流程。检索问题为：{query}。"
+                    "它覆盖定义、范围、边界、术语和适用条件。"
+                ),
+                "source": "offline-fixture://scope",
+                "source_type": "official_documentation",
+                "score": 1.0,
+            },
+            {
+                "title": "Offline fixture: evidence and verification",
+                "content": (
+                    f"该离线固定证据用于验证研究流程。检索问题为：{query}。"
+                    "它提供事实、数据、标准、直接证据和验证要求。"
+                ),
+                "source": "offline-fixture://evidence",
+                "source_type": "standard",
+                "score": 0.98,
+            },
+            {
+                "title": "Offline fixture: limitations and impact",
+                "content": (
+                    f"该离线固定证据用于验证研究流程。检索问题为：{query}。"
+                    "它说明限制、风险、失败案例、成本、影响和实施建议。"
+                ),
+                "source": "offline-fixture://limitations",
+                "source_type": "official_reference",
+                "score": 0.96,
+            },
+        ]
+        return rows[:limit]
+
+
 def build_search_backend(args: argparse.Namespace):
+    if args.search_provider == "fixture":
+        return OfflineFixtureSearchBackend()
     local = LocalHybridSearchBackend()
     if args.search_provider == "local":
         return local
@@ -37,7 +78,9 @@ def build_search_backend(args: argparse.Namespace):
 
 async def async_main(args: argparse.Namespace) -> int:
     project_root = Path(__file__).resolve().parents[2]
-    load_env_files((project_root / ".env", project_root / "evaluation" / ".env"))
+    is_fixture_smoke = args.offline and args.search_provider == "fixture"
+    if not is_fixture_smoke:
+        load_env_files((project_root / ".env", project_root / "evaluation" / ".env"))
     selected_provider = None if args.offline else (auto_provider() if args.provider == "auto" else args.provider)
     llm = build_llm(selected_provider, args.model) if selected_provider else None
     planner = LLMPlanner(llm) if llm else HeuristicPlanner()
@@ -95,9 +138,9 @@ def main() -> int:
     parser.add_argument("--model", help="Override the provider model")
     parser.add_argument(
         "--search-provider",
-        choices=("local", "tavily", "hybrid-web"),
+        choices=("local", "tavily", "hybrid-web", "fixture"),
         default="local",
-        help="Evidence retrieval source",
+        help="Evidence retrieval source; fixture is deterministic and only for smoke tests",
     )
     parser.add_argument(
         "--web-search-depth",
@@ -150,7 +193,10 @@ def main() -> int:
         action="store_true",
         help="Use deterministic lexical claim verification only",
     )
-    return asyncio.run(async_main(parser.parse_args()))
+    args = parser.parse_args()
+    if args.search_provider == "fixture" and not args.offline:
+        parser.error("--search-provider fixture requires --offline")
+    return asyncio.run(async_main(args))
 
 
 if __name__ == "__main__":

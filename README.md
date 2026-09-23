@@ -1,5 +1,7 @@
 # Enterprise LLM RAG & Deep Research Harness
 
+[![offline-ci](https://github.com/Baoza-cloud/Enterprise-LLM-RAG-Assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/Baoza-cloud/Enterprise-LLM-RAG-Assistant/actions/workflows/ci.yml)
+
 一个同时覆盖企业本地知识库问答与多 Agent 深度研究的工程化项目。项目不是两套彼此独立的 Demo，而是共享同一检索基础设施的两层系统：本地 Hybrid RAG 负责可靠召回，Deep Research Harness 在其上增加规划、动态角色编组、预算控制、证据验证、对抗修复和可复现评测。
 
 ## 项目定位
@@ -101,11 +103,16 @@ python3 evaluation/configure_tavily.py
 
 ### 3. 一键运行
 
-只验证完整流水线，不调用模型：
+只验证完整流水线，不调用模型、Web 或本地索引：
 
 ```bash
-python3 -m research_engine "解释 RAG 的核心流程" --offline
+python3 -m research_engine \
+  "解释 RAG 的核心流程" \
+  --offline \
+  --search-provider fixture
 ```
+
+`fixture` 是固定内置证据，只用于安装检查和 CI，不用于评测研究质量。
 
 使用 DeepSeek 与本地知识库：
 
@@ -258,9 +265,23 @@ ResearchBench-Adversarial v0.1，35 题 × 3 次：
 
 ## 可复现性
 
+参考环境固定为 CPython 3.12.7，版本见 [`.python-version`](.python-version)；CI 的直接与传递依赖固定在 [`requirements.lock`](requirements.lock)。`pyproject.toml` 仍声明项目支持 Python 3.10 及以上，但正式回归以锁定环境为准。
+
+在全新虚拟环境中执行最小可复现流程：
+
 ```bash
-# 运行测试
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 -m pytest -q tests
+# 安装与 CI 完全相同的依赖
+python3 -m pip install -r requirements.lock
+python3 -m pip install --no-deps -e .
+
+# 验证模块入口
+python3 -m research_engine --help
+
+# 运行现有 112 项离线测试
+python3 -m pytest -q tests/test_research_engine.py
+
+# 零 Key、零网络、零本地索引 smoke test
+python3 scripts/offline_smoke.py
 
 # 校验数据集
 cd evaluation/datasets && shasum -a 256 -c SHA256SUMS && cd ../..
@@ -271,7 +292,24 @@ python3 evaluation/validate_formal_ablation.py \
   --dataset evaluation/datasets/researchbench_frozen_v1.0.json
 ```
 
-正式实验固定数据集 SHA、模型、费率、并发、超时、随机重复与 Bootstrap 口径。三次重复先在题内聚合，再以 35 道题作为独立单位进行配对 Bootstrap；不能把 105 次运行当作 105 道独立题。
+GitHub Actions 配置位于 [`.github/workflows/ci.yml`](.github/workflows/ci.yml)，在 Pull Request、`main` 分支推送和手动触发时执行上述入口检查、112 项测试与离线 smoke。CI 不运行在线检索，避免使用仓库 Secret 和产生调用费用。
+
+在线示例需要用户自行复制 `.env.example` 并填写 DeepSeek 与 Tavily Key：
+
+```bash
+cp .env.example .env
+python3 -m research_engine \
+  "比较 RAG 与长上下文方案的适用边界" \
+  --provider deepseek \
+  --model deepseek-v4-flash \
+  --search-provider tavily \
+  --web-search-depth advanced \
+  --output evaluation/research_result_web.json
+```
+
+该在线命令不会在 CI 中执行；`.env` 已被 Git 忽略。
+
+正式实验固定数据集 SHA、模型、费率、并发、超时、随机重复与 Bootstrap 口径。三次重复先在题内聚合，再以 35 道题作为独立单位进行配对 Bootstrap。
 
 ## 项目限制
 
