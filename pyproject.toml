@@ -3,9 +3,9 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "enterprise-deep-research"
+name = "deep-research-agent-harness"
 version = "1.0.0"
-description = "Harness-based multi-agent deep research engine with retrieval, memory, adversarial repair, and evaluation."
+description = "Agent harness for reproducible multi-role deep research with retrieval, verification, adversarial repair, and evaluation."
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [

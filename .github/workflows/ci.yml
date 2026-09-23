@@ -1,4 +1,4 @@
-name: offline-ci
+name: agent-harness-ci
 
 on:
   push:

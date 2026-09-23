@@ -1,17 +1,17 @@
-# Enterprise LLM RAG & Deep Research Harness
+# Deep Research Agent Harness
 
-[![offline-ci](https://github.com/Baoza-cloud/Enterprise-LLM-RAG-Assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/Baoza-cloud/Enterprise-LLM-RAG-Assistant/actions/workflows/ci.yml)
+[![agent-harness-ci](https://github.com/Baoza-cloud/Deep-Research-Agent-Harness/actions/workflows/ci.yml/badge.svg)](https://github.com/Baoza-cloud/Deep-Research-Agent-Harness/actions/workflows/ci.yml)
 
-一个同时覆盖企业本地知识库问答与多 Agent 深度研究的工程化项目。项目不是两套彼此独立的 Demo，而是共享同一检索基础设施的两层系统：本地 Hybrid RAG 负责可靠召回，Deep Research Harness 在其上增加规划、动态角色编组、预算控制、证据验证、对抗修复和可复现评测。
+一个面向复杂研究任务的 Agent Harness：以显式契约编排多角色 Worker，通过 DAG、动态 Swarm、预算控制、共享记忆、Claim–Evidence 验证、Red/Blue 修复和质量门禁生成可追溯报告。检索层可连接 Tavily、论文来源或现有本地 Hybrid RAG，但项目核心是可控、可验证、可评测的 Agent 运行机制，而不是单一 RAG 应用。
 
 ## 项目定位
 
-项目包含两个互补部分：
+项目以 Harness 为主线，并保留一套可独立使用的本地检索实现：
 
 | 部分 | 解决的问题 | 核心实现 |
 |---|---|---|
-| 本地 Hybrid RAG | 从企业私有文档中检索并生成带来源的回答 | 文档解析、Chunk、Embedding、FAISS、BM25、RRF、相关性过滤、引用输出 |
 | Deep Research Harness | 对复杂问题执行多步骤、可审计、受预算约束的深度研究 | DAG Planner、9 状态任务机、Dynamic Swarm、共享记忆、Claim–Evidence Ledger、Red/Blue Patch、质量门禁 |
+| 本地 Hybrid RAG | 作为一种可插拔 Retrieval Backend 提供私有文档证据，也可独立运行 | 文档解析、Chunk、Embedding、FAISS、BM25、RRF、相关性过滤、引用输出 |
 
 本地 RAG 没有被推翻。它通过 `LocalHybridSearchBackend` 作为 Harness 的 `retrieval` 工具继续复用；同一运行也可以并行使用 Tavily Web 检索，再通过 RRF 合并本地与 Web 证据。
 
@@ -69,8 +69,8 @@ flowchart TB
 ### 1. 安装
 
 ```bash
-git clone https://github.com/Baoza-cloud/Enterprise-LLM-RAG-Assistant.git
-cd Enterprise-LLM-RAG-Assistant
+git clone https://github.com/Baoza-cloud/Deep-Research-Agent-Harness.git
+cd Deep-Research-Agent-Harness
 python3 -m pip install -e .
 ```
 
@@ -323,7 +323,7 @@ python3 -m research_engine \
 ## 项目结构
 
 ```text
-Enterprise-LLM-RAG-Assistant/
+Deep-Research-Agent-Harness/
 ├── src/
 │   ├── rag_pipeline.py              # 本地 Hybrid RAG
 │   ├── hybrid_retrieval.py          # Dense + BM25 + RRF
