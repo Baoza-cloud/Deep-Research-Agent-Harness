@@ -373,7 +373,7 @@ ResearchBench-Frozen v1.0，35 题 × 3 次：
 python3 -m pip install -r requirements.lock
 python3 -m pip install --no-deps -e .
 python3 -m research_engine --help
-python3 -m pytest -q tests/test_research_engine.py
+python3 -m pytest -q tests
 python3 scripts/offline_smoke.py
 
 cd evaluation/datasets
@@ -382,10 +382,11 @@ cd ../..
 
 python3 evaluation/validate_formal_ablation.py \
   evaluation/results/formal_frozen_v1_35x3/ablation-20260922T135223799454Z.json \
-  --dataset evaluation/datasets/researchbench_frozen_v1.0.json
+  --dataset evaluation/datasets/researchbench_frozen_v1.0.json \
+  --output-prefix /tmp/researchbench-frozen-v1.0-quality-gate
 ```
 
-GitHub Actions 在 Pull Request、`main` 分支推送和手动触发时运行模块入口检查、112 项离线测试和零 Key smoke。在线 DeepSeek + Tavily 示例只在用户自行配置 `.env` 后手动运行，避免 CI 消耗额度或暴露凭据。
+GitHub Actions 在 Pull Request、`main` 分支推送和手动触发时运行 Ruff、覆盖率、Python 3.10/3.11/3.12 兼容测试、wheel/sdist 构建、全新环境 wheel 安装、模块与命令入口检查和零 Key smoke。在线 DeepSeek + Tavily 示例只在用户自行配置 `.env` 后手动运行，避免 CI 消耗额度或暴露凭据。
 
 正式实验固定数据集、模型、费率、并发、超时和重复次数。三次重复先在题内聚合，再以 35 道题为独立单位做配对 Bootstrap。
 

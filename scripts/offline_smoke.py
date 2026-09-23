@@ -69,8 +69,7 @@ def main() -> int:
             raise RuntimeError("smoke run contains failed tasks")
 
         print(
-            "offline smoke: PASS "
-            f"status={payload['status']} evidences={len(payload['evidences'])}"
+            f"offline smoke: PASS status={payload['status']} evidences={len(payload['evidences'])}"
         )
     return 0
 

@@ -95,8 +95,7 @@ def select_quality_candidate(
 
     def hard_pass(candidate: ReportQualityCandidate) -> bool:
         return (
-            metric_gate(candidate)
-            and candidate.blocking_issue_count(max_pass_issue_severity) == 0
+            metric_gate(candidate) and candidate.blocking_issue_count(max_pass_issue_severity) == 0
         )
 
     def metric_gate(candidate: ReportQualityCandidate) -> bool:
@@ -206,11 +205,7 @@ def refresh_review_after_deterministic_claim_patch(
 
     if review is None:
         return None
-    claims = [
-        claim
-        for claim in extract_claims(report, min_chars=6)
-        if is_reviewable_claim(claim)
-    ]
+    claims = [claim for claim in extract_claims(report, min_chars=6) if is_reviewable_claim(claim)]
     cited = sum(bool(claim.citations) for claim in claims)
     coverage = cited / len(claims) if claims else 1.0
     retained_issues = []
@@ -220,8 +215,7 @@ def refresh_review_after_deterministic_claim_patch(
         target = (issue.target or "").strip()
         if (
             target
-            and issue.category
-            in {"factual_error", "inference_overreach", "citation_error"}
+            and issue.category in {"factual_error", "inference_overreach", "citation_error"}
             and target not in report
             and target not in {"未引用的事实陈述", "局限与不确定性"}
         ):
@@ -230,9 +224,7 @@ def refresh_review_after_deterministic_claim_patch(
     review.structured_issues = retained_issues
     review.issues = [issue.description for issue in retained_issues]
     review.missing_information = [
-        issue.description
-        for issue in retained_issues
-        if issue.action.value == "ADD"
+        issue.description for issue in retained_issues if issue.action.value == "ADD"
     ]
     review.metrics["citation_coverage"] = coverage
     review.metrics["claim_count"] = float(len(claims))
@@ -241,8 +233,7 @@ def refresh_review_after_deterministic_claim_patch(
         review.total_score >= pass_score
         and coverage >= min_citation_coverage
         and not any(
-            is_blocking_review_issue(issue, max_pass_issue_severity)
-            for issue in retained_issues
+            is_blocking_review_issue(issue, max_pass_issue_severity) for issue in retained_issues
         )
     )
     return review
@@ -347,9 +338,7 @@ class DeepResearchAgent:
                 "model": getattr(llm_config, "model", None),
                 "base_url": getattr(llm_config, "base_url", None),
                 "temperature": getattr(llm_config, "temperature", None),
-                "request_timeout_seconds": getattr(
-                    llm_config, "request_timeout_seconds", None
-                ),
+                "request_timeout_seconds": getattr(llm_config, "request_timeout_seconds", None),
                 "max_retries": getattr(llm_config, "max_retries", None),
             },
             "harness": {
@@ -459,14 +448,10 @@ class DeepResearchAgent:
         for review_round in range(1, swarm.max_review_rounds + 1):
             if not budget.try_consume(BudgetResource.REVIEW_ROUND):
                 reason = (
-                    "deadline_exceeded"
-                    if budget.deadline_exceeded()
-                    else "review_budget_exhausted"
+                    "deadline_exceeded" if budget.deadline_exceeded() else "review_budget_exhausted"
                 )
                 budget.mark_stop(reason)
-                trace.append(
-                    {"at": utc_now(), "event": "swarm_stop", "reason": reason}
-                )
+                trace.append({"at": utc_now(), "event": "swarm_stop", "reason": reason})
                 break
             final_review = await self.reviewer.review(question, draft, evidences)
             final_review = convergence.update(draft, final_review)
@@ -493,16 +478,13 @@ class DeepResearchAgent:
                 previous_ledger=previous_ledger,
             )
             previous_ledger = pre_repair_ledger
-            pre_support_rate = pre_repair_ledger.metrics.get(
-                "claim_support_rate", 0.0
-            )
+            pre_support_rate = pre_repair_ledger.metrics.get("claim_support_rate", 0.0)
             pre_semantic_available = (
                 self.repairer.verifier.llm is None
                 or pre_repair_ledger.verification_mode == "semantic"
             )
             pre_claim_gate_passed = (
-                pre_support_rate >= self.config.min_claim_support_rate
-                and pre_semantic_available
+                pre_support_rate >= self.config.min_claim_support_rate and pre_semantic_available
             )
             quality_guardrail_action = None
             if self.config.enable_dynamic_swarm:
@@ -534,9 +516,7 @@ class DeepResearchAgent:
                             "round": review_round,
                             "action": quality_guardrail_action,
                             "claim_support_rate": pre_support_rate,
-                            "minimum_claim_support_rate": (
-                                self.config.min_claim_support_rate
-                            ),
+                            "minimum_claim_support_rate": (self.config.min_claim_support_rate),
                         }
                     )
             trace.append(
@@ -633,16 +613,12 @@ class DeepResearchAgent:
                     "verification_mode": post_retrieval_ledger.verification_mode,
                     "ledger_reused": post_ledger_reused,
                     "targeted_queries": claim_queries,
-                    "targeted_evidence_count": (
-                        len(new_evidence) if verification_queries else 0
-                    ),
+                    "targeted_evidence_count": (len(new_evidence) if verification_queries else 0),
                     **post_retrieval_ledger.metrics,
                 }
             )
             if claim_patch_result.changed:
-                draft = self.repairer.normalize_citations(
-                    claim_patch_result.report, evidences
-                )
+                draft = self.repairer.normalize_citations(claim_patch_result.report, evidences)
                 trace.append(
                     {
                         "at": utc_now(),
@@ -832,9 +808,7 @@ class DeepResearchAgent:
             )
         claim_support_rate = claim_ledger.metrics.get("claim_support_rate", 0.0)
         final_citation_coverage = float(
-            final_review.metrics.get("citation_coverage", 0.0)
-            if final_review
-            else 0.0
+            final_review.metrics.get("citation_coverage", 0.0) if final_review else 0.0
         )
         fallback_triggered = bool(
             self.config.enable_dynamic_swarm
@@ -864,12 +838,8 @@ class DeepResearchAgent:
                 ],
                 forced=False,
             )
-            fallback_report = self.repairer.normalize_citations(
-                fallback_report, evidences
-            )
-            fallback_report, removed_markers = remove_omission_markers(
-                fallback_report
-            )
+            fallback_report = self.repairer.normalize_citations(fallback_report, evidences)
+            fallback_report, removed_markers = remove_omission_markers(fallback_report)
             fallback_ledger = await self.repairer.verifier.build_ledger(
                 fallback_report,
                 evidences,
@@ -913,9 +883,7 @@ class DeepResearchAgent:
                 min_claim_support_rate=self.config.min_claim_support_rate,
                 min_citation_coverage=self.config.min_citation_coverage,
                 max_pass_issue_severity=self.config.max_pass_issue_severity,
-                support_drop_tolerance=(
-                    self.config.dynamic_claim_support_drop_tolerance
-                ),
+                support_drop_tolerance=(self.config.dynamic_claim_support_drop_tolerance),
             )
             fallback_selected = selected_candidate is fixed_candidate
             draft = selected_candidate.report
@@ -948,19 +916,15 @@ class DeepResearchAgent:
                     "reason": fallback_selection_reason,
                     "cost_used_as_quality_override": False,
                     "omission_markers_removed": removed_markers,
-                    "fallback_claim_patch_count": len(
-                        fallback_claim_patch.applied
-                    ),
+                    "fallback_claim_patch_count": len(fallback_claim_patch.applied),
                     "candidates": fallback_candidate_metrics,
                 }
             )
         semantic_ledger_available = (
-            self.repairer.verifier.llm is None
-            or claim_ledger.verification_mode == "semantic"
+            self.repairer.verifier.llm is None or claim_ledger.verification_mode == "semantic"
         )
         claim_ledger_passed = (
-            claim_support_rate >= self.config.min_claim_support_rate
-            and semantic_ledger_available
+            claim_support_rate >= self.config.min_claim_support_rate and semantic_ledger_available
         )
         adjudicated_red_disagreements = adjudicate_red_with_claim_ledger(
             final_review,
@@ -995,9 +959,7 @@ class DeepResearchAgent:
                     review_issue_dimension_counts.get(issue.dimension, 0) + 1
                 )
                 action = issue.action.value
-                review_issue_action_counts[action] = (
-                    review_issue_action_counts.get(action, 0) + 1
-                )
+                review_issue_action_counts[action] = review_issue_action_counts.get(action, 0) + 1
                 review_issue_category_counts[issue.category] = (
                     review_issue_category_counts.get(issue.category, 0) + 1
                 )
@@ -1018,9 +980,7 @@ class DeepResearchAgent:
         ):
             if claim_ledger.metrics.get(metric_name, 0.0) > 0:
                 completion_issue_reasons.append(reason)
-        evidence_gap_count = int(
-            claim_ledger.metrics.get("evidence_gap_statement_count", 0.0)
-        )
+        evidence_gap_count = int(claim_ledger.metrics.get("evidence_gap_statement_count", 0.0))
         evidence_gap_reasons: list[str] = []
         if evidence_gap_count:
             evidence_gap_reasons.append("explicit_evidence_gap_statements")
@@ -1035,8 +995,7 @@ class DeepResearchAgent:
         ):
             evidence_gap_reasons.append("claim_evidence_gaps")
         if final_review and any(
-            issue.category == "evidence_gap"
-            for issue in final_review.structured_issues
+            issue.category == "evidence_gap" for issue in final_review.structured_issues
         ):
             evidence_gap_reasons.append("red_detected_evidence_gaps")
         if adjudicated_red_disagreements:
@@ -1045,20 +1004,18 @@ class DeepResearchAgent:
         blocking_review_issues = [
             issue
             for issue in (final_review.structured_issues if final_review else [])
-            if is_blocking_review_issue(
-                issue, self.config.max_pass_issue_severity
-            )
+            if is_blocking_review_issue(issue, self.config.max_pass_issue_severity)
         ]
         unresolved_claim_defects = (
             claim_support_rate < self.config.min_claim_support_rate
             or any(
-            claim_ledger.metrics.get(metric_name, 0.0) > 0
-            for metric_name in (
-                "contradicted_claim_count",
-                "time_conflict_count",
-                "number_conflict_count",
-                "entity_conflict_count",
-            )
+                claim_ledger.metrics.get(metric_name, 0.0) > 0
+                for metric_name in (
+                    "contradicted_claim_count",
+                    "time_conflict_count",
+                    "number_conflict_count",
+                    "entity_conflict_count",
+                )
             )
             or not semantic_ledger_available
         )
@@ -1067,22 +1024,16 @@ class DeepResearchAgent:
             and not final_review.passed
             and (
                 not final_review.structured_issues
-                or any(
-                    issue.category == "unknown"
-                    for issue in final_review.structured_issues
-                )
+                or any(issue.category == "unknown" for issue in final_review.structured_issues)
             )
         )
         has_review_defect = bool(
-            blocking_review_issues
-            or unresolved_claim_defects
-            or opaque_review_failure
+            blocking_review_issues or unresolved_claim_defects or opaque_review_failure
         )
         if blocking_review_issues or opaque_review_failure:
             completion_issue_reasons.insert(0, "red_review_failed")
         if final_review and any(
-            issue.category == "citation_error"
-            for issue in blocking_review_issues
+            issue.category == "citation_error" for issue in blocking_review_issues
         ):
             completion_issue_reasons.append("citation_coverage_below_threshold")
         if forced_synthesis:
@@ -1101,8 +1052,7 @@ class DeepResearchAgent:
             "evidence_count": len(evidences),
             "source_count": len(sources),
             "prompt_injection_evidence_count": sum(
-                bool(item.metadata.get("prompt_injection_detected"))
-                for item in evidences
+                bool(item.metadata.get("prompt_injection_detected")) for item in evidences
             ),
             "evidence_omission_markers_removed": sum(
                 int(item.metadata.get("extraction_omission_markers_removed", 0))
@@ -1132,15 +1082,11 @@ class DeepResearchAgent:
             "evidence_gap_reasons": evidence_gap_reasons,
             "evidence_gap_count": evidence_gap_count,
             "blocking_review_issue_count": len(blocking_review_issues),
-            "red_claim_verifier_adjudication_count": len(
-                adjudicated_red_disagreements
-            ),
+            "red_claim_verifier_adjudication_count": len(adjudicated_red_disagreements),
             "review_issue_dimension_counts": review_issue_dimension_counts,
             "review_issue_action_counts": review_issue_action_counts,
             "review_issue_category_counts": review_issue_category_counts,
-            "review_rounds": sum(
-                1 for item in trace if item.get("event") == "red_review"
-            ),
+            "review_rounds": sum(1 for item in trace if item.get("event") == "red_review"),
             "blue_patch_applied_count": sum(
                 len(item.get("applied_patches", []))
                 for item in trace
@@ -1154,8 +1100,7 @@ class DeepResearchAgent:
             "blue_rewrite_fallbacks": sum(
                 1
                 for item in trace
-                if item.get("event") == "blue_repair"
-                and item.get("mode") == "rewrite_fallback"
+                if item.get("event") == "blue_repair" and item.get("mode") == "rewrite_fallback"
             ),
             "forced_synthesis": forced_synthesis,
             "swarm_complexity": swarm.level.value,
@@ -1241,8 +1186,7 @@ class DeepResearchAgent:
             batch_failures = [
                 execution
                 for execution in executions
-                if not execution.succeeded
-                and execution.failure_kind != "worker_budget_exhausted"
+                if not execution.succeeded and execution.failure_kind != "worker_budget_exhausted"
             ]
             for execution in executions:
                 unique_execution_evidence: list[Evidence] = []
@@ -1255,14 +1199,10 @@ class DeepResearchAgent:
                 evidences.extend(unique_execution_evidence)
 
             batch_evidences = [
-                evidence
-                for execution in executions
-                for evidence in execution.evidences
+                evidence for execution in executions for evidence in execution.evidences
             ]
             evidence_stop = (
-                budget.observe_evidence_batch(batch_evidences)
-                if not state.complete
-                else None
+                budget.observe_evidence_batch(batch_evidences) if not state.complete else None
             )
             if evidence_stop:
                 self._cancel_unfinished(state, evidence_stop)
@@ -1413,9 +1353,7 @@ class DeepResearchAgent:
                 "round": review_round,
                 "queries": list(queries),
                 "evidence_count": len(evidences),
-                "agent_role": (
-                    agent_override.role if agent_override is not None else None
-                ),
+                "agent_role": (agent_override.role if agent_override is not None else None),
             }
         )
         return evidences
@@ -1451,7 +1389,6 @@ class DeepResearchAgent:
         for runtime in state.tasks.values():
             if runtime.status in {TaskStatus.PENDING, TaskStatus.READY}:
                 runtime.transition(TaskStatus.CANCELLED, reason)
-
 
 
 def default_memory_path(project_root: str | Path) -> Path:

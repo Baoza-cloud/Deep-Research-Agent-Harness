@@ -81,7 +81,9 @@ async def async_main(args: argparse.Namespace) -> int:
     is_fixture_smoke = args.offline and args.search_provider == "fixture"
     if not is_fixture_smoke:
         load_env_files((project_root / ".env", project_root / "evaluation" / ".env"))
-    selected_provider = None if args.offline else (auto_provider() if args.provider == "auto" else args.provider)
+    selected_provider = (
+        None if args.offline else (auto_provider() if args.provider == "auto" else args.provider)
+    )
     llm = build_llm(selected_provider, args.model) if selected_provider else None
     planner = LLMPlanner(llm) if llm else HeuristicPlanner()
     memory = SharedMemory(args.memory or default_memory_path(project_root))
@@ -101,9 +103,7 @@ async def async_main(args: argparse.Namespace) -> int:
             max_blue_patches_per_round=args.max_blue_patches_per_round,
             max_patch_growth_chars=args.max_patch_growth_chars,
             max_blue_patch_generation_attempts=args.max_blue_patch_generation_attempts,
-            enable_semantic_claim_verification=(
-                not args.disable_semantic_claim_verification
-            ),
+            enable_semantic_claim_verification=(not args.disable_semantic_claim_verification),
             min_claim_support_rate=args.min_claim_support_rate,
             enable_dynamic_swarm=not args.disable_dynamic_swarm,
             max_swarm_agents=args.max_swarm_agents,

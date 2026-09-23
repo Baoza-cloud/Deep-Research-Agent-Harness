@@ -71,9 +71,7 @@ def load_dataset(path: Path) -> dict[str, Any]:
         if not isinstance(roles, list) or not roles:
             raise ValueError(f"Sample {sample.get('id')} needs expected roles")
         if int(expected.get("agent_count", 0)) != len(roles):
-            raise ValueError(
-                f"Sample {sample.get('id')} agent_count must match role count"
-            )
+            raise ValueError(f"Sample {sample.get('id')} agent_count must match role count")
         distribution[level] += 1
 
     declared_count = payload.get("expected_sample_count")
@@ -121,10 +119,7 @@ async def evaluate_one(
         "roles": actual_roles == [str(item) for item in expected["roles"]],
     }
     routed = [swarm.select_agent(task, worker).role for task in plan.subtasks]
-    probe_routes = {
-        task.subtask_id: swarm.select_agent(task, worker).role
-        for task in PROBE_TASKS
-    }
+    probe_routes = {task.subtask_id: swarm.select_agent(task, worker).role for task in PROBE_TASKS}
     return {
         "sample_id": sample["id"],
         "repeat": repeat,
@@ -149,12 +144,9 @@ def aggregate(rows: Sequence[dict[str, Any]]) -> dict[str, Any]:
     actual_levels = Counter(str(row["actual"]["level"]) for row in rows)
     agent_counts = Counter(int(row["actual"]["agent_count"]) for row in rows)
     role_combinations = Counter(
-        " + ".join(str(agent["role"]) for agent in row["actual"]["agents"])
-        for row in rows
+        " + ".join(str(agent["role"]) for agent in row["actual"]["agents"]) for row in rows
     )
-    confusion = Counter(
-        f"{row['expected']['level']}->{row['actual']['level']}" for row in rows
-    )
+    confusion = Counter(f"{row['expected']['level']}->{row['actual']['level']}" for row in rows)
     latencies = [float(row["latency_seconds"]) for row in rows]
     return {
         "total": len(rows),
@@ -263,11 +255,7 @@ async def run(args: argparse.Namespace) -> Path:
                 }
 
     rows = await asyncio.gather(
-        *(
-            guarded(sample, repeat)
-            for repeat in range(1, args.repeats + 1)
-            for sample in samples
-        )
+        *(guarded(sample, repeat) for repeat in range(1, args.repeats + 1) for sample in samples)
     )
     run_id = datetime.now(timezone.utc).strftime("live-swarm-%Y%m%dT%H%M%SZ")
     payload = {

@@ -23,17 +23,13 @@ from .schemas import (
 
 
 CITATION_PATTERN = re.compile(r"\[([A-Za-z0-9_-]+-E\d+)\]")
-CLAIM_SPLIT = re.compile(
-    r"(?<=[。！？!?\.])\s+(?!\[[A-Za-z0-9_-]+-E\d+\])|\n+"
-)
+CLAIM_SPLIT = re.compile(r"(?<=[。！？!?\.])\s+(?!\[[A-Za-z0-9_-]+-E\d+\])|\n+")
 TOKEN_PATTERN = re.compile(r"[A-Za-z0-9_]+|[\u4e00-\u9fff]")
 CODE_BLOCK = re.compile(r"```[\s\S]*?```")
 MARKDOWN_HEADING = re.compile(r"^\s*#{1,6}\s+(.+)$")
 NON_CLAIM_SECTION = re.compile(r"来源|证据索引|参考文献|证据目录")
 TABLE_SEPARATOR = re.compile(r"\|?[\s:|-]+\|?")
-MARKDOWN_LABEL = re.compile(
-    r"^\s*(?:[-+*]\s*)?\*\*(?:\d+[.)、]\s*)?[^*]+\*\*\s*$"
-)
+MARKDOWN_LABEL = re.compile(r"^\s*(?:[-+*]\s*)?\*\*(?:\d+[.)、]\s*)?[^*]+\*\*\s*$")
 LIST_PREFIX = re.compile(r"^(?:[-+*]\s+|\d+[.)、]\s*)")
 UNCERTAINTY_PATTERN = re.compile(
     r"局限|不确定|证据不足|证据缺口|无法确认|无法确定|仍需验证|待验证|"
@@ -126,8 +122,7 @@ def is_reviewable_claim(claim: ClaimRecord) -> bool:
     ):
         return False
     if not claim.citations and (
-        UNCERTAINTY_PATTERN.search(semantic)
-        or NON_ASSERTIVE_SECTION.search(claim.section.strip())
+        UNCERTAINTY_PATTERN.search(semantic) or NON_ASSERTIVE_SECTION.search(claim.section.strip())
     ):
         return False
     return True
@@ -196,26 +191,16 @@ def extract_claims(
 
 
 def _ledger_metrics(claims: Sequence[ClaimRecord]) -> dict[str, float]:
-    reviewable = [
-        item for item in claims if item.verdict is not SupportVerdict.NOT_APPLICABLE
-    ]
+    reviewable = [item for item in claims if item.verdict is not SupportVerdict.NOT_APPLICABLE]
     supported = sum(item.verdict is SupportVerdict.SUPPORTED for item in reviewable)
-    partial = sum(
-        item.verdict is SupportVerdict.PARTIALLY_SUPPORTED for item in reviewable
-    )
-    contradicted = sum(
-        item.verdict is SupportVerdict.CONTRADICTED for item in reviewable
-    )
+    partial = sum(item.verdict is SupportVerdict.PARTIALLY_SUPPORTED for item in reviewable)
+    contradicted = sum(item.verdict is SupportVerdict.CONTRADICTED for item in reviewable)
     uncited = sum(item.verdict is SupportVerdict.UNCITED for item in reviewable)
-    insufficient = sum(
-        item.verdict is SupportVerdict.INSUFFICIENT for item in reviewable
-    )
+    insufficient = sum(item.verdict is SupportVerdict.INSUFFICIENT for item in reviewable)
     unknown = sum(item.verdict is SupportVerdict.UNKNOWN for item in reviewable)
     links = [link for item in reviewable for link in item.links]
     citation_links = [link for link in links if link.cited]
-    supported_links = sum(
-        link.verdict is SupportVerdict.SUPPORTED for link in citation_links
-    )
+    supported_links = sum(link.verdict is SupportVerdict.SUPPORTED for link in citation_links)
     supported_candidates = sum(
         link.verdict is SupportVerdict.SUPPORTED and not link.cited for link in links
     )
@@ -239,9 +224,7 @@ def _ledger_metrics(claims: Sequence[ClaimRecord]) -> dict[str, float]:
         "unknown_claim_count": float(unknown),
         "unsupported_claim_count": float(len(reviewable) - supported),
         "claim_support_rate": supported / len(reviewable) if reviewable else 1.0,
-        "citation_correctness": (
-            supported_links / len(citation_links) if citation_links else 0.0
-        ),
+        "citation_correctness": (supported_links / len(citation_links) if citation_links else 0.0),
         "aligned_uncited_support_count": float(supported_candidates),
         "time_conflict_count": float(conflict_counts["time"]),
         "number_conflict_count": float(conflict_counts["number"]),
@@ -337,10 +320,7 @@ class ClaimEvidenceVerifier:
                 previous_claim is not None
                 and previous_claim.verdict
                 in {SupportVerdict.SUPPORTED, SupportVerdict.NOT_APPLICABLE}
-                and all(
-                    link.evidence_id in evidence_map
-                    for link in previous_claim.links
-                )
+                and all(link.evidence_id in evidence_map for link in previous_claim.links)
             ):
                 claim.verdict = previous_claim.verdict
                 claim.confidence = previous_claim.confidence
@@ -361,39 +341,26 @@ class ClaimEvidenceVerifier:
                     evidence_tokens = _tokens(evidence.content)
                     denominator = min(len(claim_tokens), len(evidence_tokens))
                     overlap = (
-                        len(claim_tokens & evidence_tokens) / denominator
-                        if denominator
-                        else 0.0
+                        len(claim_tokens & evidence_tokens) / denominator if denominator else 0.0
                     )
-                    retrieval_query = str(
-                        evidence.metadata.get("retrieval_query", "")
-                    )
+                    retrieval_query = str(evidence.metadata.get("retrieval_query", ""))
                     claim_query_anchor = claim.text[:300]
                     targeted_for_claim = (
-                        bool(claim_query_anchor)
-                        and claim_query_anchor in retrieval_query
+                        bool(claim_query_anchor) and claim_query_anchor in retrieval_query
                     )
-                    if (
-                        targeted_for_claim
-                        or overlap >= self.candidate_lexical_threshold
-                    ):
+                    if targeted_for_claim or overlap >= self.candidate_lexical_threshold:
                         candidate_score = max(overlap, 1.0 if targeted_for_claim else 0.0)
                         candidate_scores[evidence.evidence_id] = max(
                             candidate_score,
                             candidate_scores.get(evidence.evidence_id, 0.0),
                         )
                 ranked_candidates = sorted(
-                    (
-                        (score, evidence_id)
-                        for evidence_id, score in candidate_scores.items()
-                    ),
+                    ((score, evidence_id) for evidence_id, score in candidate_scores.items()),
                     reverse=True,
                 )
                 candidate_ids.extend(
                     evidence_id
-                    for _, evidence_id in ranked_candidates[
-                        : self.candidate_evidence_per_claim
-                    ]
+                    for _, evidence_id in ranked_candidates[: self.candidate_evidence_per_claim]
                 )
 
             for evidence_id in dict.fromkeys(candidate_ids):
@@ -413,9 +380,7 @@ class ClaimEvidenceVerifier:
                     evidence_tokens = _tokens(evidence.content)
                     denominator = min(len(claim_tokens), len(evidence_tokens))
                     overlap = (
-                        len(claim_tokens & evidence_tokens) / denominator
-                        if denominator
-                        else 0.0
+                        len(claim_tokens & evidence_tokens) / denominator if denominator else 0.0
                     )
                     verdict = (
                         SupportVerdict.SUPPORTED
@@ -512,8 +477,7 @@ conflict_types 只填写 TIME、NUMBER、ENTITY 中实际存在的类型，没�
                         judged_link.conflict_types = [
                             str(value).strip().lower()
                             for value in raw_conflicts
-                            if str(value).strip().lower()
-                            in {"time", "number", "entity"}
+                            if str(value).strip().lower() in {"time", "number", "entity"}
                         ]
                     for key, attr in (
                         ("supported_aspects", "supported_aspects"),
@@ -552,19 +516,13 @@ conflict_types 只填写 TIME、NUMBER、ENTITY 中实际存在的类型，没�
                 continue
             cited_links = [link for link in claim.links if link.cited]
             supported_links = [
-                link
-                for link in cited_links
-                if link.verdict is SupportVerdict.SUPPORTED
+                link for link in cited_links if link.verdict is SupportVerdict.SUPPORTED
             ]
             contradicted_links = [
-                link
-                for link in claim.links
-                if link.verdict is SupportVerdict.CONTRADICTED
+                link for link in claim.links if link.verdict is SupportVerdict.CONTRADICTED
             ]
             partial_links = [
-                link
-                for link in cited_links
-                if link.verdict is SupportVerdict.PARTIALLY_SUPPORTED
+                link for link in cited_links if link.verdict is SupportVerdict.PARTIALLY_SUPPORTED
             ]
             if contradicted_links:
                 claim.verdict = SupportVerdict.CONTRADICTED
@@ -617,11 +575,7 @@ conflict_types 只填写 TIME、NUMBER、ENTITY 中实际存在的类型，没�
             }:
                 continue
             conflicts = sorted(
-                {
-                    conflict
-                    for link in claim.links
-                    for conflict in link.conflict_types
-                }
+                {conflict for link in claim.links for conflict in link.conflict_types}
             )
             suffix = f"；重点核对{','.join(conflicts)}冲突" if conflicts else ""
             text = f"{claim.text[:500]}{suffix}"
@@ -704,13 +658,10 @@ conflict_types 只填写 TIME、NUMBER、ENTITY 中实际存在的类型，没�
             blocking = [
                 item
                 for item in patch_claims
-                if item.verdict
-                not in {SupportVerdict.SUPPORTED, SupportVerdict.NOT_APPLICABLE}
+                if item.verdict not in {SupportVerdict.SUPPORTED, SupportVerdict.NOT_APPLICABLE}
             ]
             if blocking:
-                summary = ",".join(
-                    f"{item.claim_id}:{item.verdict.value}" for item in blocking[:5]
-                )
+                summary = ",".join(f"{item.claim_id}:{item.verdict.value}" for item in blocking[:5])
                 rejected.append(
                     PatchRejection(
                         patch.patch_id,

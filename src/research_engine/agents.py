@@ -6,7 +6,7 @@ import asyncio
 import hashlib
 import re
 import unicodedata
-from typing import Any, Awaitable, Callable, Mapping, Sequence
+from typing import Any, Callable, Mapping, Sequence
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from .harness import AgentSpec, RetrievalTool, RetrievalToolAdapter, RunContext
@@ -77,9 +77,35 @@ class ResearchWorker:
         "evidence_verifier": 0.42,
     }
     _ENGLISH_STOPWORDS = {
-        "a", "an", "and", "are", "as", "at", "be", "by", "for", "from",
-        "how", "in", "is", "it", "of", "on", "or", "that", "the", "this",
-        "to", "was", "what", "when", "where", "which", "who", "why", "with",
+        "a",
+        "an",
+        "and",
+        "are",
+        "as",
+        "at",
+        "be",
+        "by",
+        "for",
+        "from",
+        "how",
+        "in",
+        "is",
+        "it",
+        "of",
+        "on",
+        "or",
+        "that",
+        "the",
+        "this",
+        "to",
+        "was",
+        "what",
+        "when",
+        "where",
+        "which",
+        "who",
+        "why",
+        "with",
     }
     _QUERY_SYNONYMS = {
         "核验": "验证",
@@ -88,7 +114,12 @@ class ResearchWorker:
         "文档": "文档",
     }
     _TRACKING_QUERY_KEYS = {
-        "fbclid", "gclid", "ref", "ref_src", "source", "spm",
+        "fbclid",
+        "gclid",
+        "ref",
+        "ref_src",
+        "source",
+        "spm",
     }
 
     def __init__(self, backend: SearchBackend):
@@ -97,9 +128,7 @@ class ResearchWorker:
     async def run(self, task: ResearchSubtask) -> list[Evidence]:
         oversample = min(20, max(task.max_results, task.max_results * 2))
         rows = await self.backend.search(task.question, limit=oversample)
-        selected, _ = self._filter_and_rank(
-            rows, task.question, "researcher", task.max_results
-        )
+        selected, _ = self._filter_and_rank(rows, task.question, "researcher", task.max_results)
         return self._normalize(task, selected, task.question, "researcher")
 
     async def run_for_agent(
@@ -123,9 +152,7 @@ class ResearchWorker:
             relevance_threshold=self.ROLE_RELEVANCE_THRESHOLDS.get(spec.role, 0.14),
         )
         rows = await self.backend.search(query, limit=oversample)
-        selected, audit = self._filter_and_rank(
-            rows, task.question, spec.role, task.max_results
-        )
+        selected, audit = self._filter_and_rank(rows, task.question, spec.role, task.max_results)
         context.emit(
             "retrieval_filter_applied",
             task_id=task.subtask_id,
@@ -156,9 +183,7 @@ class ResearchWorker:
         for input_rank, row in enumerate(rows, start=1):
             content = str(row.get("content") or row.get("text") or "").strip()
             if not content:
-                removals.append(
-                    cls._removal_record(row, input_rank, "empty_content")
-                )
+                removals.append(cls._removal_record(row, input_rank, "empty_content"))
                 continue
             quality = cls._score_relevance(row, query, role)
             copied = dict(row)
@@ -189,9 +214,7 @@ class ResearchWorker:
                 and components["entity_overlap"] == 0.0
                 and item["provider_score"] < 0.55
             )
-            if has_query_signal and (
-                item["relevance_score"] < threshold or lacks_content_match
-            ):
+            if has_query_signal and (item["relevance_score"] < threshold or lacks_content_match):
                 removals.append(
                     cls._removal_record(
                         item["row"],
@@ -227,9 +250,7 @@ class ResearchWorker:
                     if prior_quality["source_domain"] != quality["source_domain"]:
                         continue
                     prior_content = str(
-                        prior["row"].get("content")
-                        or prior["row"].get("text")
-                        or ""
+                        prior["row"].get("content") or prior["row"].get("text") or ""
                     )
                     if cls._near_duplicate(content, prior_content):
                         duplicate_reason = "same_domain_near_duplicate"
@@ -300,24 +321,31 @@ class ResearchWorker:
         role: str,
     ) -> dict[str, Any]:
         text = " ".join(
-            str(row.get(key) or "")
-            for key in ("title", "content", "text", "source", "url")
+            str(row.get(key) or "") for key in ("title", "content", "text", "source", "url")
         )
         query_terms = cls._terms(query)
         document_terms = cls._terms(text)
         matched_terms = sorted(query_terms & document_terms)
-        keyword_score = min(
-            1.0,
-            len(matched_terms) / max(1, min(4, len(query_terms))),
-        ) if query_terms else 0.0
+        keyword_score = (
+            min(
+                1.0,
+                len(matched_terms) / max(1, min(4, len(query_terms))),
+            )
+            if query_terms
+            else 0.0
+        )
 
         query_entities = cls._entities(query)
         document_entities = cls._entities(text)
         matched_entities = sorted(query_entities & document_entities)
-        entity_score = min(
-            1.0,
-            len(matched_entities) / max(1, min(3, len(query_entities))),
-        ) if query_entities else 0.0
+        entity_score = (
+            min(
+                1.0,
+                len(matched_entities) / max(1, min(3, len(query_entities))),
+            )
+            if query_entities
+            else 0.0
+        )
 
         raw_score = row.get("score", row.get("rrf_score", row.get("bm25_score")))
         provider_score = cls._clamp_score(raw_score)
@@ -353,11 +381,7 @@ class ResearchWorker:
             "source_class": source_class,
             "source_authority_score": round(authority, 6),
             "canonical_url": canonical_url,
-            "source_domain": (
-                urlsplit(canonical_url).hostname or ""
-                if canonical_url
-                else ""
-            ),
+            "source_domain": (urlsplit(canonical_url).hostname or "" if canonical_url else ""),
         }
 
     @classmethod
@@ -377,10 +401,7 @@ class ResearchWorker:
             if len(chunk) == 2:
                 cjk_terms.add(chunk)
             else:
-                cjk_terms.update(
-                    chunk[index : index + 2]
-                    for index in range(len(chunk) - 1)
-                )
+                cjk_terms.update(chunk[index : index + 2] for index in range(len(chunk) - 1))
         return latin | cjk_terms
 
     @classmethod
@@ -485,10 +506,7 @@ class ResearchWorker:
         host = (parts.hostname or "").casefold()
         port = parts.port
         netloc = host
-        if port and not (
-            (scheme == "http" and port == 80)
-            or (scheme == "https" and port == 443)
-        ):
+        if port and not ((scheme == "http" and port == 80) or (scheme == "https" and port == 443)):
             netloc = f"{host}:{port}"
         path = re.sub(r"/{2,}", "/", parts.path or "/")
         if path != "/":
@@ -591,8 +609,14 @@ class ResearchWorker:
             metadata = {
                 key: value
                 for key, value in row.items()
-                if key not in {
-                    "content", "text", "source", "title", "url", "metadata",
+                if key
+                not in {
+                    "content",
+                    "text",
+                    "source",
+                    "title",
+                    "url",
+                    "metadata",
                     "__retrieval_quality",
                 }
             }
@@ -651,11 +675,7 @@ def _dedupe_evidence(evidences: Sequence[Evidence]) -> list[Evidence]:
     for evidence in evidences:
         canonical_url = ResearchWorker._canonical_url(evidence.url or evidence.source)
         fingerprint = ResearchWorker._content_fingerprint(evidence.content)
-        domain = (
-            urlsplit(canonical_url).hostname or ""
-            if canonical_url
-            else ""
-        )
+        domain = urlsplit(canonical_url).hostname or "" if canonical_url else ""
         if canonical_url and canonical_url in seen_urls:
             continue
         if fingerprint and fingerprint in seen_content:
@@ -744,13 +764,13 @@ class Synthesizer:
 研究目标：{plan.objective}
 强制合成：{forced}
 待修复要求：
-{repair_block or '无'}
+{repair_block or "无"}
 上一版草稿：
-{draft or '无'}
+{draft or "无"}
 证据上下文：
-{context or '没有可用证据'}
+{context or "没有可用证据"}
 完整证据目录（用于引用 ID 对齐）：
-{evidence_catalog or '没有可用证据'}
+{evidence_catalog or "没有可用证据"}
 """.strip()
         return (await call_llm(self.llm, prompt)).strip()
 
@@ -777,8 +797,7 @@ class Synthesizer:
             finding_lines.append(f"- {normalized} [{evidence.evidence_id}]")
         findings = "\n".join(finding_lines)
         sources = "\n".join(
-            f"- [{evidence.evidence_id}] {evidence.source}"
-            for evidence in evidences
+            f"- [{evidence.evidence_id}] {evidence.source}" for evidence in evidences
         )
         return (
             f"{header}{summary}\n\n## 关键发现\n{findings}\n\n"

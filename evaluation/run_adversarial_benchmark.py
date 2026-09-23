@@ -71,7 +71,7 @@ async def _rewrite_report(
 你是 Blue Agent。请根据冻结证据和 Red issues 重写整篇报告。
 删除无证据结论和未知引用，补齐合法引用与局限说明。不得编造证据 ID。
 只输出修复后的 Markdown 报告，不要解释过程。
-问题：{case.sample['question']}
+问题：{case.sample["question"]}
 合法证据：{json.dumps(evidence, ensure_ascii=False)}
 Red issues：{json.dumps(_normalize([asdict(item) for item in issues]), ensure_ascii=False)}
 待修复报告：
@@ -97,9 +97,7 @@ async def _run_case(
         if llm is None:
             final_report = case.corrupted_report
         else:
-            final_report = await _rewrite_report(
-                llm, case, pre_review.structured_issues
-            )
+            final_report = await _rewrite_report(llm, case, pre_review.structured_issues)
     elif variant == "structured_patch_blue":
         repairer = BlueTeamRepairer(
             llm=llm,
@@ -119,9 +117,7 @@ async def _run_case(
     post_review = (
         pre_review
         if variant == "corrupted_no_repair"
-        else await reviewer.review(
-            str(case.sample["question"]), final_report, evidences
-        )
+        else await reviewer.review(str(case.sample["question"]), final_report, evidences)
     )
     metrics = evaluate_adversarial_report(
         case,
@@ -164,9 +160,7 @@ def _aggregate(rows: Sequence[dict[str, Any]], bootstrap_samples: int) -> dict[s
             for row, value in zip(successful, values):
                 grouped.setdefault(str(row["case_id"]), []).append(value)
             question_means = [statistics.fmean(items) for items in grouped.values()]
-            intervals[name] = list(
-                bootstrap_ci(question_means, samples=bootstrap_samples)
-            )
+            intervals[name] = list(bootstrap_ci(question_means, samples=bootstrap_samples))
     return {
         "total": len(rows),
         "successful": len(successful),
@@ -194,11 +188,7 @@ async def run(args: argparse.Namespace) -> Path:
             raise ValueError("Unknown --sample-id: " + ", ".join(missing_ids))
         samples = [item for item in samples if str(item["id"]) in requested_ids]
     cases = [inject_faults(item) for item in samples[: args.limit or None]]
-    if (
-        not args.limit
-        and not args.sample_id
-        and len(cases) != int(protocol["expected_case_count"])
-    ):
+    if not args.limit and not args.sample_id and len(cases) != int(protocol["expected_case_count"]):
         raise ValueError("Adversarial protocol case count mismatch")
     resume_payload: dict[str, Any] | None = None
     if args.resume_from:
@@ -222,18 +212,13 @@ async def run(args: argparse.Namespace) -> Path:
         variant: {
             str(row["pair_key"]): row
             for row in (
-                (resume_payload or {})
-                .get("variants", {})
-                .get(variant, {})
-                .get("samples", [])
+                (resume_payload or {}).get("variants", {}).get(variant, {}).get("samples", [])
             )
             if "error" not in row
         }
         for variant in args.variants
     }
-    new_rows: dict[str, dict[str, dict[str, Any]]] = {
-        variant: {} for variant in args.variants
-    }
+    new_rows: dict[str, dict[str, dict[str, Any]]] = {variant: {} for variant in args.variants}
 
     async def execute_bundle(
         repeat: int,
@@ -265,9 +250,7 @@ async def run(args: argparse.Namespace) -> Path:
             bundle: dict[str, dict[str, Any]] = {}
             for variant in pending_variants:
                 try:
-                    row = await _run_case(
-                        variant, case, llm, reviewer, pre_review
-                    )
+                    row = await _run_case(variant, case, llm, reviewer, pre_review)
                     row["repeat"] = repeat
                     row["pair_key"] = f"{case.case_id}#r{repeat}"
                     bundle[variant] = row
@@ -289,9 +272,7 @@ async def run(args: argparse.Namespace) -> Path:
             pair_key = f"{case.case_id}#r{repeat}"
             expected.append((repeat, case, pair_key))
             pending_variants = [
-                variant
-                for variant in args.variants
-                if pair_key not in prior_success[variant]
+                variant for variant in args.variants if pair_key not in prior_success[variant]
             ]
             if pending_variants:
                 jobs.append(execute_bundle(repeat, case, pending_variants))
@@ -303,9 +284,7 @@ async def run(args: argparse.Namespace) -> Path:
     variant_rows: dict[str, list[dict[str, Any]]] = {}
     for variant in args.variants:
         combined = {**new_rows[variant], **prior_success[variant]}
-        variant_rows[variant] = [
-            combined[pair_key] for _, _, pair_key in expected
-        ]
+        variant_rows[variant] = [combined[pair_key] for _, _, pair_key in expected]
 
     created_at = datetime.now(timezone.utc)
     payload = {
@@ -328,9 +307,7 @@ async def run(args: argparse.Namespace) -> Path:
         "case_count": len(cases),
         "repeats": args.repeats,
         "planned_runs_per_variant": len(cases) * args.repeats,
-        "resumed_from": (
-            str(Path(args.resume_from).resolve()) if args.resume_from else None
-        ),
+        "resumed_from": (str(Path(args.resume_from).resolve()) if args.resume_from else None),
         "rollback_guard": evaluate_rollback_guard(),
         "cases": [serialize_case(case) for case in cases],
         "variants": {

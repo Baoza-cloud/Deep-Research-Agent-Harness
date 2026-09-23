@@ -78,18 +78,14 @@ def _proxy_relevance(
     """Return a benchmark-derived weak relevance label and its reasons."""
 
     url = str(row.get("url") or row.get("source") or "")
-    text = " ".join(
-        str(row.get(key) or "") for key in ("title", "content", "text")
-    ).casefold()
+    text = " ".join(str(row.get(key) or "") for key in ("title", "content", "text")).casefold()
     domain_hits = [
         str(domain)
         for domain in sample.get("required_domains", [])
         if _domain_matches(url, str(domain))
     ]
     term_hits = [
-        str(term)
-        for term in sample.get("required_terms", [])
-        if str(term).casefold() in text
+        str(term) for term in sample.get("required_terms", []) if str(term).casefold() in text
     ]
     reasons = [*(f"domain:{item}" for item in domain_hits)]
     reasons.extend(f"term:{item}" for item in term_hits)
@@ -124,8 +120,7 @@ def load_gold_records(
     allowed_runs = {str(item) for item in compatible_run_ids if item}
     if allowed_runs and source_run_id not in allowed_runs:
         raise ValueError(
-            f"Gold source run {source_run_id!r} does not match cache runs "
-            f"{sorted(allowed_runs)!r}"
+            f"Gold source run {source_run_id!r} does not match cache runs {sorted(allowed_runs)!r}"
         )
 
     unit_index = {str(unit["unit_id"]): unit for unit in units}
@@ -151,9 +146,7 @@ def load_gold_records(
         cached_url = str(row.get("url") or row.get("source") or "")
         if cached_url != str(record.get("url") or ""):
             raise ValueError(f"Gold candidate URL mismatch: {expected_key}")
-        content_sha256 = hashlib.sha256(
-            _normalized_content(row).encode("utf-8")
-        ).hexdigest()
+        content_sha256 = hashlib.sha256(_normalized_content(row).encode("utf-8")).hexdigest()
         if content_sha256 != record.get("content_sha256"):
             raise ValueError(f"Gold candidate content mismatch: {expected_key}")
         annotation = record.get("annotation", {})
@@ -209,17 +202,12 @@ def _evaluate_unit(
         for index, row in enumerate(rows, start=1)
         if str(row.get("content") or row.get("text") or "").strip()
     }
-    positive_ranks = {
-        index for index in nonempty_ranks if labels[index]["relevant"]
-    }
+    positive_ranks = {index for index in nonempty_ranks if labels[index]["relevant"]}
     false_rejected_ranks = positive_ranks & below_threshold_ranks
     selected_positive_ranks = selected_ranks & positive_ranks
-    selected_authorities = [
-        float(item["source_authority_score"]) for item in audit["selected"]
-    ]
+    selected_authorities = [float(item["source_authority_score"]) for item in audit["selected"]]
     primary_count = sum(
-        str(item["source_class"]) in PRIMARY_SOURCE_CLASSES
-        for item in audit["selected"]
+        str(item["source_class"]) in PRIMARY_SOURCE_CLASSES for item in audit["selected"]
     )
     return {
         "unit_id": unit["unit_id"],
@@ -262,9 +250,7 @@ def _aggregate_gold(
     true_positive = false_positive = true_negative = false_negative = 0
     for record in gold_records:
         unit_id = f"{record['sample_id']}::{record['role']}"
-        predicted_retain = int(record["input_rank"]) in selected_by_unit.get(
-            unit_id, set()
-        )
+        predicted_retain = int(record["input_rank"]) in selected_by_unit.get(unit_id, set())
         should_retain = bool(record["annotation"]["should_retain"])
         if predicted_retain and should_retain:
             true_positive += 1
@@ -301,16 +287,12 @@ def _aggregate(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     retained = sum(int(row["retained_count"]) for row in rows)
     relevant = sum(int(row["proxy_relevant_count"]) for row in rows)
     false_rejected = sum(int(row["proxy_false_rejected_count"]) for row in rows)
-    selected_relevant = sum(
-        int(row["selected_proxy_relevant_count"]) for row in rows
-    )
+    selected_relevant = sum(int(row["selected_proxy_relevant_count"]) for row in rows)
     primary = sum(int(row["primary_source_count"]) for row in rows)
     authority_sum = sum(float(row["selected_authority_sum"]) for row in rows)
     removals: Counter[str] = Counter()
     for row in rows:
-        removals.update(
-            {str(key): int(value) for key, value in row["removal_counts"].items()}
-        )
+        removals.update({str(key): int(value) for key, value in row["removal_counts"].items()})
     return {
         "unit_count": len(rows),
         "raw_nonempty_count": raw,
@@ -355,11 +337,7 @@ def recommend_thresholds(
     floors = minimum_thresholds or ResearchWorker.ROLE_RELEVANCE_THRESHOLDS
     for role in ROLE_ORDER:
         current_floor = floors.get(role, 0.0)
-        rows = [
-            row
-            for row in curves.get(role, [])
-            if float(row["threshold"]) >= current_floor
-        ]
+        rows = [row for row in curves.get(role, []) if float(row["threshold"]) >= current_floor]
         ceiling = MAX_PROXY_FALSE_REJECTION[role]
         feasible = [
             row
@@ -461,9 +439,7 @@ def _aggregate_gold_summaries(
             "gold_precision": precision,
             "gold_recall": recall,
             "gold_f1": (
-                2 * precision * recall / (precision + recall)
-                if precision + recall
-                else 0.0
+                2 * precision * recall / (precision + recall) if precision + recall else 0.0
             ),
             "covered_roles": [
                 role
@@ -483,16 +459,12 @@ def _aggregate_role_summaries(
     retained = sum(int(row["retained_count"]) for row in rows)
     relevant = sum(int(row["proxy_relevant_count"]) for row in rows)
     false_rejected = sum(int(row["proxy_false_rejected_count"]) for row in rows)
-    selected_relevant = sum(
-        int(row["selected_proxy_relevant_count"]) for row in rows
-    )
+    selected_relevant = sum(int(row["selected_proxy_relevant_count"]) for row in rows)
     authority_sum = sum(
-        float(row["mean_selected_authority"]) * int(row["retained_count"])
-        for row in rows
+        float(row["mean_selected_authority"]) * int(row["retained_count"]) for row in rows
     )
     primary_sum = sum(
-        float(row["primary_source_rate"]) * int(row["retained_count"])
-        for row in rows
+        float(row["primary_source_rate"]) * int(row["retained_count"]) for row in rows
     )
     return {
         "raw_nonempty_count": raw,
@@ -534,9 +506,7 @@ async def _fetch_units(
     backend = TavilySearchBackend(search_depth=search_depth)
     semaphore = asyncio.Semaphore(concurrency)
     specs = [
-        (sample, str(role))
-        for sample in samples
-        for role in sample["expected_swarm"]["roles"]
+        (sample, str(role)) for sample in samples for role in sample["expected_swarm"]["roles"]
     ]
     completed = 0
     progress_lock = asyncio.Lock()
@@ -558,8 +528,7 @@ async def _fetch_units(
             completed += 1
             print(
                 f"[{completed}/{len(specs)}] {sample['id']}::{role} "
-                f"rows={len(rows)} latency={latency:.2f}s"
-                + (f" error={error}" if error else ""),
+                f"rows={len(rows)} latency={latency:.2f}s" + (f" error={error}" if error else ""),
                 flush=True,
             )
         return {
@@ -711,15 +680,12 @@ async def run(args: argparse.Namespace) -> Path:
             raise ValueError("Calibration cache does not contain units")
         source_run_id = cached.get("run_id")
         compatible_run_ids = [
-            str(item)
-            for item in (cached.get("run_id"), cached.get("source_run_id"))
-            if item
+            str(item) for item in (cached.get("run_id"), cached.get("source_run_id")) if item
         ]
         cached_thresholds = cached.get("current_thresholds")
         if isinstance(cached_thresholds, Mapping):
             cache_thresholds = {
-                str(role): float(value)
-                for role, value in cached_thresholds.items()
+                str(role): float(value) for role, value in cached_thresholds.items()
             }
     else:
         if not os.getenv("TAVILY_API_KEY"):
@@ -761,19 +727,13 @@ async def run(args: argparse.Namespace) -> Path:
         role: {
             "current_threshold": current_thresholds.get(role),
             "proxy_threshold": (
-                proxy_recommendations[role]["threshold"]
-                if role in proxy_recommendations
-                else None
+                proxy_recommendations[role]["threshold"] if role in proxy_recommendations else None
             ),
             "gold_threshold": (
-                gold_recommendations[role]["threshold"]
-                if role in gold_recommendations
-                else None
+                gold_recommendations[role]["threshold"] if role in gold_recommendations else None
             ),
             "final_threshold": (
-                recommendations[role]["threshold"]
-                if role in recommendations
-                else None
+                recommendations[role]["threshold"] if role in recommendations else None
             ),
             "gold_minus_proxy": (
                 float(gold_recommendations[role]["threshold"])
@@ -782,9 +742,7 @@ async def run(args: argparse.Namespace) -> Path:
                 else None
             ),
             "recommendation_source": (
-                recommendations[role]["recommendation_source"]
-                if role in recommendations
-                else None
+                recommendations[role]["recommendation_source"] if role in recommendations else None
             ),
         }
         for role in ROLE_ORDER
@@ -851,24 +809,28 @@ async def run(args: argparse.Namespace) -> Path:
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     output_path = output_dir / f"{run_id}.json"
-    output_path.write_text(
-        json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
+    output_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     output_path.with_suffix(".md").write_text(
         render_markdown(payload, output_path), encoding="utf-8"
     )
-    print(json.dumps({
-        "run_id": run_id,
-        "total_units": payload["total_units"],
-        "successful_units": payload["successful_units"],
-        "recommendations": {
-            role: {
-                "threshold": item["threshold"],
-                "source": item["recommendation_source"],
-            }
-            for role, item in recommendations.items()
-        },
-    }, ensure_ascii=False, indent=2))
+    print(
+        json.dumps(
+            {
+                "run_id": run_id,
+                "total_units": payload["total_units"],
+                "successful_units": payload["successful_units"],
+                "recommendations": {
+                    role: {
+                        "threshold": item["threshold"],
+                        "source": item["recommendation_source"],
+                    }
+                    for role, item in recommendations.items()
+                },
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
     print(f"result_file={output_path}")
     return output_path
 
@@ -895,9 +857,7 @@ def main() -> int:
     )
     parser.add_argument(
         "--gold",
-        default=str(
-            EVALUATION_DIR / "datasets" / "researchbench_retrieval_gold_v1.0.json"
-        ),
+        default=str(EVALUATION_DIR / "datasets" / "researchbench_retrieval_gold_v1.0.json"),
         help="Adjudicated Retrieval-Gold dataset bound to the cached candidates",
     )
     parser.add_argument(

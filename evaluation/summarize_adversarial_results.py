@@ -33,9 +33,7 @@ def _question_means(rows: Sequence[dict[str, Any]], metric: str) -> dict[str, fl
     grouped: dict[str, list[float]] = {}
     for row in rows:
         if "error" not in row:
-            grouped.setdefault(str(row["sample_id"]), []).append(
-                float(row["metrics"][metric])
-            )
+            grouped.setdefault(str(row["sample_id"]), []).append(float(row["metrics"][metric]))
     return {key: statistics.fmean(values) for key, values in grouped.items()}
 
 
@@ -51,10 +49,7 @@ def _paired_delta(
     keys = sorted(set(left) & set(right))
     values = [right[key] - left[key] for key in keys]
     rng = random.Random(42)
-    boots = sorted(
-        statistics.fmean(rng.choice(values) for _ in values)
-        for _ in range(samples)
-    )
+    boots = sorted(statistics.fmean(rng.choice(values) for _ in values) for _ in range(samples))
     repeat_deltas = []
     for repeat in range(1, int(payload["repeats"]) + 1):
         base_rows = {
@@ -70,8 +65,7 @@ def _paired_delta(
         common = sorted(set(base_rows) & set(cand_rows))
         repeat_deltas.append(
             statistics.fmean(
-                float(cand_rows[key]["metrics"][metric])
-                - float(base_rows[key]["metrics"][metric])
+                float(cand_rows[key]["metrics"][metric]) - float(base_rows[key]["metrics"][metric])
                 for key in common
             )
         )
@@ -135,10 +129,7 @@ def _paired_run_delta(
     keys = sorted(set(left) & set(right))
     values = [right[key] - left[key] for key in keys]
     rng = random.Random(42)
-    boots = sorted(
-        statistics.fmean(rng.choice(values) for _ in values)
-        for _ in range(samples)
-    )
+    boots = sorted(statistics.fmean(rng.choice(values) for _ in values) for _ in range(samples))
     repeat_deltas = []
     for repeat in range(1, int(candidate["repeats"]) + 1):
         base_rows = {
@@ -154,8 +145,7 @@ def _paired_run_delta(
         common = sorted(set(base_rows) & set(cand_rows))
         repeat_deltas.append(
             statistics.fmean(
-                float(cand_rows[key]["metrics"][metric])
-                - float(base_rows[key]["metrics"][metric])
+                float(cand_rows[key]["metrics"][metric]) - float(base_rows[key]["metrics"][metric])
                 for key in common
             )
         )
@@ -217,9 +207,7 @@ def render(payload: dict[str, Any], source: Path) -> str:
     )
     for baseline, candidate in comparisons:
         repair = _paired_delta(payload, baseline, candidate, "fault_repair_rate")
-        hallucination = _paired_delta(
-            payload, baseline, candidate, "rule_hallucination_rate"
-        )
+        hallucination = _paired_delta(payload, baseline, candidate, "rule_hallucination_rate")
         lines.append(
             f"- `{candidate}` vs `{baseline}`：修复率 Δ "
             f"{100 * repair['delta']:+.2f} pp（95% CI "
@@ -275,9 +263,7 @@ def render_comparison(
         "case_count",
         "repeats",
     )
-    incompatible = [
-        key for key in compatibility_keys if baseline.get(key) != candidate.get(key)
-    ]
+    incompatible = [key for key in compatibility_keys if baseline.get(key) != candidate.get(key)]
     if incompatible:
         raise ValueError("Incompatible runs: " + ", ".join(incompatible))
 
@@ -293,10 +279,7 @@ def render_comparison(
     variant = "structured_patch_blue"
     old_mean = baseline["variants"][variant]["aggregate"]["mean"]
     new_mean = candidate["variants"][variant]["aggregate"]["mean"]
-    deltas = {
-        metric: _paired_run_delta(baseline, candidate, metric)
-        for metric, _ in metrics
-    }
+    deltas = {metric: _paired_run_delta(baseline, candidate, metric) for metric, _ in metrics}
     old_faults = _fault_rates(baseline, variant)
     new_faults = _fault_rates(candidate, variant)
     lines = [

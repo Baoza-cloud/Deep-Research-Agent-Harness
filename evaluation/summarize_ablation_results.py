@@ -89,9 +89,7 @@ def _repeat_deltas(
     repeats = sorted({key[0] for key in base} & {key[0] for key in cand})
     deltas: list[float] = []
     for repeat in repeats:
-        keys = sorted(
-            key for key in set(base) & set(cand) if key[0] == repeat
-        )
+        keys = sorted(key for key in set(base) & set(cand) if key[0] == repeat)
         if keys:
             deltas.append(statistics.fmean(cand[key] - base[key] for key in keys))
     return deltas
@@ -109,9 +107,7 @@ def _paired_question_metric(
                 value: Any = row
                 for key in path:
                     value = value[key]
-                values.setdefault(str(row["sample_id"]), []).append(
-                    float(value)
-                )
+                values.setdefault(str(row["sample_id"]), []).append(float(value))
         return values
 
     base = grouped(baseline)
@@ -150,9 +146,7 @@ def _comparison_lines(payload: dict[str, Any]) -> tuple[list[str], list[str]]:
         result = comparison["metrics"]["overall_quality"]
         delta = float(result["paired_delta_mean"])
         lower, upper = map(float, result["paired_delta_bootstrap_95_ci"])
-        repeat_deltas = _repeat_deltas(
-            payload, baseline, candidate, "overall_quality"
-        )
+        repeat_deltas = _repeat_deltas(payload, baseline, candidate, "overall_quality")
         direction = sum(item > 0 for item in repeat_deltas)
         table.append(
             "| "
@@ -168,9 +162,7 @@ def _comparison_lines(payload: dict[str, Any]) -> tuple[list[str], list[str]]:
         )
         if complete and lower > 0 and repeat_deltas and direction == len(repeat_deltas):
             relative_lower, relative_upper = _relative_bootstrap_ci(
-                _paired_question_metric(
-                    payload, baseline, candidate, "overall_quality"
-                )
+                _paired_question_metric(payload, baseline, candidate, "overall_quality")
             )
             claims.append(
                 f"在 ResearchBench-Frozen v1.0（11 领域/35 题，3 次重复）上，"
@@ -180,9 +172,7 @@ def _comparison_lines(payload: dict[str, Any]) -> tuple[list[str], list[str]]:
                 f"paired Cohen's dz={float(result['paired_cohens_dz']):.2f}）。"
             )
 
-    efficiency = payload.get("comparisons", {}).get(
-        "structured_patch_blue_vs_rewrite_blue", {}
-    )
+    efficiency = payload.get("comparisons", {}).get("structured_patch_blue_vs_rewrite_blue", {})
     if efficiency.get("metrics"):
         latency = efficiency["metrics"]["latency_seconds"]
         latency_lower, latency_upper = latency["paired_delta_bootstrap_95_ci"]
@@ -210,9 +200,9 @@ def _comparison_lines(payload: dict[str, Any]) -> tuple[list[str], list[str]]:
             )
             completion_mean_base = statistics.fmean(item[0] for item in completion_pairs)
             completion_mean_candidate = statistics.fmean(item[1] for item in completion_pairs)
-            completion_change = 100.0 * (
-                completion_mean_candidate - completion_mean_base
-            ) / completion_mean_base
+            completion_change = (
+                100.0 * (completion_mean_candidate - completion_mean_base) / completion_mean_base
+            )
             completion_low, completion_high = _relative_bootstrap_ci(completion_pairs)
             quality = efficiency["metrics"]["overall_quality"]
             calls = efficiency["metrics"]["llm_calls"]
@@ -227,9 +217,7 @@ def _comparison_lines(payload: dict[str, Any]) -> tuple[list[str], list[str]]:
                 f"（95% CI {-completion_high:.2f}%–{-completion_low:.2f}%），"
                 f"代价是模型调用数增加 {float(calls['relative_change_percent']):.2f}%。"
             )
-    swarm = payload.get("comparisons", {}).get(
-        "dynamic_swarm_vs_fixed_harness", {}
-    )
+    swarm = payload.get("comparisons", {}).get("dynamic_swarm_vs_fixed_harness", {})
     if swarm.get("metrics") and payload.get("provider") != "offline":
         baseline = str(swarm["baseline"])
         candidate = str(swarm["candidate"])
@@ -422,8 +410,7 @@ def render(payload: dict[str, Any], source: Path) -> str:
         version = str(row.get("swarm_plan", {}).get("policy_version") or "unversioned")
         observed_versions[version] = observed_versions.get(version, 0) + 1
     if len(observed_versions) > 1 or (
-        observed_versions
-        and next(iter(observed_versions)) != swarm_policy.get("version")
+        observed_versions and next(iter(observed_versions)) != swarm_policy.get("version")
     ):
         composition = "，".join(
             f"{version}={count}" for version, count in sorted(observed_versions.items())
@@ -450,9 +437,13 @@ def render(payload: dict[str, Any], source: Path) -> str:
         default=0,
     )
     repeats = int(payload.get("repeats", 1))
-    formal = independent_questions == 35 and repeats >= 3 and all(
-        int(item.get("aggregate", {}).get("failed", 0)) == 0
-        for item in payload.get("variants", {}).values()
+    formal = (
+        independent_questions == 35
+        and repeats >= 3
+        and all(
+            int(item.get("aggregate", {}).get("failed", 0)) == 0
+            for item in payload.get("variants", {}).values()
+        )
     )
     lines.extend(
         [
@@ -471,8 +462,7 @@ def render(payload: dict[str, Any], source: Path) -> str:
         lines.extend(f"- {claim}" for claim in claims)
     else:
         lines.append(
-            "- 本次结果没有同时满足完整配对、3/3 方向一致且 95% CI 不跨 0；"
-            "不建议声称存在稳定提升。"
+            "- 本次结果没有同时满足完整配对、3/3 方向一致且 95% CI 不跨 0；不建议声称存在稳定提升。"
         )
     lines.extend(
         [
