@@ -61,7 +61,7 @@ jobs:
         run: python scripts/offline_smoke.py
 
       - name: Upload coverage report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-python-3.12
           path: coverage.xml
@@ -125,7 +125,7 @@ jobs:
           "$RUNNER_TEMP/wheel-smoke/bin/python" scripts/offline_smoke.py
 
       - name: Upload distributions
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: deep-research-agent-harness-v1.1.0
           path: dist/*
