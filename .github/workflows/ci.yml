@@ -50,6 +50,7 @@ jobs:
         run: |
           python -m research_engine --help
           deep-research --help
+          deep-research-trace --help
 
       - name: Run zero-key offline smoke test
         env:
@@ -122,6 +123,7 @@ jobs:
           python -m venv "$RUNNER_TEMP/wheel-smoke"
           "$RUNNER_TEMP/wheel-smoke/bin/python" -m pip install --disable-pip-version-check dist/*.whl
           "$RUNNER_TEMP/wheel-smoke/bin/deep-research" --help
+          "$RUNNER_TEMP/wheel-smoke/bin/deep-research-trace" --help
           "$RUNNER_TEMP/wheel-smoke/bin/python" scripts/offline_smoke.py
 
       - name: Upload distributions

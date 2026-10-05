@@ -58,6 +58,7 @@ Changelog = "https://github.com/Baoza-cloud/Deep-Research-Agent-Harness/blob/mai
 
 [project.scripts]
 deep-research = "research_engine.cli:main"
+deep-research-trace = "research_engine.trace_viewer:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

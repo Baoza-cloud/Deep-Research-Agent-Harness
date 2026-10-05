@@ -34,6 +34,7 @@ from .schemas import (
     utc_now,
 )
 from .swarm import ComplexityLevel, SwarmPlan
+from .tracing import TraceEventFactory
 
 
 class RunStoreError(RuntimeError):
@@ -236,6 +237,7 @@ class RunStore:
         self._connection.execute("PRAGMA journal_mode = WAL")
         self._connection.execute("PRAGMA synchronous = FULL")
         self._lock = threading.RLock()
+        self._trace_factories: dict[str, TraceEventFactory] = {}
         self._create_schema()
 
     def _create_schema(self) -> None:
@@ -435,7 +437,38 @@ class RunStore:
         occurred_at = str(event.get("at") or utc_now())
         return event_key, occurred_at, payload
 
+    def bind_trace_factory(self, run_id: str, factory: TraceEventFactory) -> None:
+        """Use one sequence allocator for orchestration and store-generated events."""
+
+        self._trace_factories[run_id] = factory
+
+    def _normalize_event(self, run_id: str, event: dict[str, Any]) -> dict[str, Any]:
+        if event.get("trace_id") and event.get("trace_schema_version"):
+            return event
+        factory = self._trace_factories.get(run_id)
+        if factory is None:
+            row = self._connection.execute(
+                "SELECT metadata_json FROM research_runs WHERE run_id = ?",
+                (run_id,),
+            ).fetchone()
+            metadata = _load(row["metadata_json"], {}) if row else {}
+            trace_id = str(
+                metadata.get("trace_id")
+                or f"tr-{hashlib.sha256(run_id.encode('utf-8')).hexdigest()[:32]}"
+            )
+            previous = [
+                json.loads(item["event_json"])
+                for item in self._connection.execute(
+                    "SELECT event_json FROM research_events WHERE run_id = ? ORDER BY sequence",
+                    (run_id,),
+                ).fetchall()
+            ]
+            factory = TraceEventFactory(trace_id, previous)
+            self._trace_factories[run_id] = factory
+        return factory.normalize(event)
+
     def _insert_event(self, run_id: str, event: dict[str, Any]) -> None:
+        event = self._normalize_event(run_id, event)
         event_key, occurred_at, payload = self._event_identity(event)
         self._connection.execute(
             """
@@ -617,7 +650,7 @@ class RunStore:
                 run_id,
                 {
                     "at": now,
-                    "event": "run_finalized",
+                    "event": "run_result_persisted",
                     "status": result.status,
                     "result_sha256": _sha256(_dump(payload)),
                 },
@@ -775,18 +808,29 @@ class PersistedTrace(list[dict[str, Any]]):
         *,
         store: RunStore | None,
         run_id: str,
+        trace_id: str,
     ):
         super().__init__(initial)
         self.store = store
         self.run_id = run_id
+        self.factory = TraceEventFactory(trace_id, list(initial))
+        if self.store is not None:
+            self.store.bind_trace_factory(run_id, self.factory)
+
+    def prepare(self, event: dict[str, Any]) -> dict[str, Any]:
+        return self.factory.normalize(event)
+
+    def persist_only(self, event: dict[str, Any]) -> dict[str, Any]:
+        record = self.prepare(event)
+        if self.store is not None:
+            self.store.append_event(self.run_id, record)
+        return record
 
     def append(self, event: dict[str, Any]) -> None:
-        if self.store is not None:
-            self.store.append_event(self.run_id, event)
-        super().append(event)
+        super().append(self.persist_only(event))
 
     def extend(self, events: Iterable[dict[str, Any]]) -> None:
-        rows = list(events)
+        rows = [self.prepare(event) for event in events]
         if self.store is not None:
             self.store.append_events(self.run_id, rows)
         super().extend(rows)

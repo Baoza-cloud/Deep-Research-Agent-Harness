@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import asyncio
 import inspect
+import uuid
 from dataclasses import dataclass, field
 from typing import Any, Callable, Mapping, Protocol, Sequence
 
 from .schemas import utc_now
+from .tracing import duration_ms, stable_span_id, summarize_value, usage_delta
 
 
 class RetrievalTool(Protocol):
@@ -108,7 +110,12 @@ class RunContext:
     artifacts: dict[str, Any] = field(default_factory=dict)
     events: list[dict[str, Any]] = field(default_factory=list)
     tools: ToolRegistry | None = None
-    event_sink: Callable[[dict[str, Any]], None] | None = field(
+    event_sink: Callable[[dict[str, Any]], dict[str, Any] | None] | None = field(
+        default=None,
+        repr=False,
+        compare=False,
+    )
+    usage_provider: Callable[[], Mapping[str, Any]] | None = field(
         default=None,
         repr=False,
         compare=False,
@@ -116,9 +123,22 @@ class RunContext:
 
     def emit(self, event: str, **payload: Any) -> None:
         record = {"at": utc_now(), "event": event, **payload}
-        self.events.append(record)
         if self.event_sink is not None:
-            self.event_sink(record)
+            record = self.event_sink(record) or record
+        self.events.append(record)
+
+    def usage_snapshot(self) -> dict[str, Any]:
+        if self.usage_provider is None:
+            return {
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+                "cost_usd": 0.0,
+                "retry_count": 0,
+                "call_count": 0,
+                "measurement": "not_applicable",
+            }
+        return dict(self.usage_provider())
 
     def put_artifact(self, key: str, value: Any) -> None:
         if not key.strip():
@@ -214,34 +234,73 @@ class LocalAgentRuntime:
             raise RuntimeError(f"Agent {spec.agent_id} requires unregistered tools: {missing}")
         started_at = utc_now()
         invocation_id = getattr(payload, "subtask_id", None)
+        trace_id = str(context.metadata.get("trace_id") or context.run_id)
+        invocation_key = f"{invocation_id or spec.agent_id}:{uuid.uuid4().hex}"
+        span_id = stable_span_id(trace_id, "agent", invocation_key)
+        parent_span_id = (
+            stable_span_id(trace_id, "dag-node", str(invocation_id)) if invocation_id else None
+        )
+        input_summary = summarize_value(payload)
+        usage_before = context.usage_snapshot()
         context.emit(
             "agent_started",
             agent_id=spec.agent_id,
             role=spec.role,
             invocation_id=invocation_id,
+            span_id=span_id,
+            parent_span_id=parent_span_id,
+            input_summary=input_summary,
+            tools=list(spec.tool_names),
         )
         try:
             output = await handler.run(payload, context)
         except BaseException as exc:
+            finished_at = utc_now()
             context.emit(
                 "agent_failed",
                 agent_id=spec.agent_id,
                 role=spec.role,
                 invocation_id=invocation_id,
+                span_id=span_id,
+                parent_span_id=parent_span_id,
                 error_type=type(exc).__name__,
+                duration_ms=duration_ms(started_at, finished_at),
+                input_summary=input_summary,
+                usage=usage_delta(usage_before, context.usage_snapshot()),
             )
             raise
         finished_at = utc_now()
+        telemetry = usage_delta(usage_before, context.usage_snapshot())
         context.emit(
             "agent_completed",
             agent_id=spec.agent_id,
             role=spec.role,
             invocation_id=invocation_id,
+            span_id=span_id,
+            parent_span_id=parent_span_id,
+            duration_ms=duration_ms(started_at, finished_at),
+            input_summary=input_summary,
+            output_summary=summarize_value(output),
+            usage=telemetry,
+            retry_count=telemetry["retry_count"],
+            token_usage={
+                "prompt": telemetry["prompt_tokens"],
+                "completion": telemetry["completion_tokens"],
+                "total": telemetry["total_tokens"],
+                "measurement": telemetry["measurement"],
+            },
+            cost_usd=telemetry["cost_usd"],
         )
         return AgentExecutionResult(
             agent_id=spec.agent_id,
             output=output,
             started_at=started_at,
             finished_at=finished_at,
-            metadata={"role": spec.role, "tools": list(spec.tool_names)},
+            metadata={
+                "role": spec.role,
+                "tools": list(spec.tool_names),
+                "span_id": span_id,
+                "duration_ms": duration_ms(started_at, finished_at),
+                "usage": telemetry,
+            },
         )

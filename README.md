@@ -180,6 +180,22 @@ python3 -m research_engine --replay production-run-001 \
   --output evaluation/production-run-001-replay.json
 ```
 
+运行时可同时生成一个不依赖服务端或 CDN 的本地 Trace Viewer：
+
+```bash
+python3 -m research_engine "研究问题" \
+  --provider deepseek \
+  --search-provider tavily \
+  --output evaluation/run.json \
+  --trace-html evaluation/run-trace.html
+
+# 也可以把已有结果或 Replay JSON 转成 HTML
+deep-research-trace evaluation/run.json \
+  --output evaluation/run-trace.html
+```
+
+Viewer 展示 Trace ID、DAG 节点、Agent 并发瀑布图、输入/输出摘要、耗时、Token、成本、重试次数，以及 Dynamic Swarm 角色选择、Evidence Verifier、Fixed fallback 和停止条件的触发原因。摘要只保存长度、哈希、键名和短预览，不复制完整 Prompt 或证据正文。
+
 可用 `--run-store /path/to/runs.sqlite3` 指定独立运行库。运行库与跨 Agent 共享记忆分离，均被 Git 忽略。
 
 原有本地 RAG 流水线可独立运行：
@@ -298,6 +314,7 @@ ResearchBench-Adversarial v0.1，35 题 × 3 次：
 - **Patch 安全**：拒绝未知 Evidence ID、歧义 target、非法 DELETE、无效替换和超限增长；验证失败自动回滚。
 - **Claim 质量门禁**：检测时间、数值、实体冲突；低支持率时定向补证据、降低表述强度或删除陈述。
 - **Dynamic 质量护栏**：引用或 Claim 支持率不足时生成 Fixed 候选，比较后保留质量更高者，成本不能覆盖质量下降。
+- **结构化可观测性**：所有事件使用统一的 Trace ID、Event ID、序号、类别和阶段；Planner、Worker、Synthesizer、Red、Blue、Verifier 生成可关联 Span，并输出本地 JSON/HTML 时间线。
 
 完成状态分为：`completed`、`completed_with_evidence_gaps`、`completed_with_review_issues` 和 `partial_timeout`，避免把诚实的证据缺口与事实错误混为一类。
 
@@ -315,7 +332,7 @@ python3 -m pip install --no-deps -e .
 # 验证模块入口
 python3 -m research_engine --help
 
-# 运行按子系统拆分的 118 项离线测试
+# 运行按子系统拆分的 123 项离线测试
 python3 -m pytest -q tests
 
 # 零 Key、零网络、零本地索引 smoke test

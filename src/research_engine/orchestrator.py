@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import os
 import uuid
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 from typing import Any, Protocol, Sequence
 
@@ -54,6 +54,15 @@ from .swarm import (
     SwarmPolicy,
 )
 from .text_quality import remove_omission_markers
+from .tracing import (
+    TRACE_SCHEMA_VERSION,
+    duration_ms,
+    new_trace_id,
+    stable_span_id,
+    summarize_value,
+    usage_delta,
+    usage_snapshot,
+)
 
 
 @dataclass
@@ -334,13 +343,18 @@ class DeepResearchAgent:
             raise ValueError("resume=True requires run_id")
 
         run_id = run_id or f"research-{uuid.uuid4().hex}"
+        initial_trace_id = new_trace_id()
         checkpoint: RunCheckpoint | None = None
         owner_id = uuid.uuid4().hex
         if self.run_store is not None:
             created = self.run_store.create_run(
                 run_id,
                 question,
-                metadata={"engine_version": os.getenv("RESEARCH_ENGINE_VERSION", "dev")},
+                metadata={
+                    "engine_version": os.getenv("RESEARCH_ENGINE_VERSION", "dev"),
+                    "trace_id": initial_trace_id,
+                    "trace_schema_version": TRACE_SCHEMA_VERSION,
+                },
             )
             if not created:
                 checkpoint = self.run_store.load(run_id)
@@ -361,6 +375,11 @@ class DeepResearchAgent:
                 question,
                 run_id=run_id,
                 resume_checkpoint=checkpoint if resume else None,
+                initial_trace_id=(
+                    str(checkpoint.metadata.get("trace_id") or initial_trace_id)
+                    if checkpoint is not None
+                    else initial_trace_id
+                ),
             )
         except BaseException as exc:
             if self.run_store is not None:
@@ -387,6 +406,7 @@ class DeepResearchAgent:
         *,
         run_id: str,
         resume_checkpoint: RunCheckpoint | None,
+        initial_trace_id: str,
     ) -> ResearchResult:
 
         reset_review_history = getattr(self.reviewer, "reset_history", None)
@@ -426,22 +446,28 @@ class DeepResearchAgent:
             if resume_checkpoint is not None and resume_checkpoint.metadata
             else current_run_metadata
         )
+        trace_id = str(run_metadata.get("trace_id") or initial_trace_id)
+        run_metadata["trace_id"] = trace_id
+        run_metadata["trace_schema_version"] = TRACE_SCHEMA_VERSION
         previous_events = (
             self.run_store.events(run_id)
             if self.run_store is not None and resume_checkpoint is not None
             else []
         )
-        trace = PersistedTrace(previous_events, store=self.run_store, run_id=run_id)
+        trace = PersistedTrace(
+            previous_events,
+            store=self.run_store,
+            run_id=run_id,
+            trace_id=trace_id,
+        )
+        llm = getattr(self.synthesizer, "llm", None)
         context = RunContext(
             run_id=run_id,
             objective=question,
             tools=self.tool_registry,
             metadata=run_metadata,
-            event_sink=(
-                (lambda event: self.run_store.append_event(run_id, event))
-                if self.run_store is not None
-                else None
-            ),
+            event_sink=trace.persist_only,
+            usage_provider=lambda: usage_snapshot(llm),
         )
         if resume_checkpoint is not None and resume_checkpoint.plan is not None:
             plan = resume_checkpoint.plan
@@ -450,6 +476,14 @@ class DeepResearchAgent:
                 plan,
                 self.config,
                 self.worker_spec,
+            )
+            # A resumed attempt gets a fresh wall-clock window from the
+            # current configuration while retaining its persisted role and
+            # budget shape. This makes timeout recovery deterministic even
+            # when tracing adds small local overhead.
+            swarm = replace(
+                swarm,
+                max_elapsed_seconds=self.config.global_timeout_seconds,
             )
             budget = BudgetController.restore(swarm, resume_checkpoint.budget)
             completed_review_rounds = sum(
@@ -461,7 +495,15 @@ class DeepResearchAgent:
         else:
             if self.run_store is not None:
                 self.run_store.set_phase(run_id, "planning")
-            plan = await self.planner.plan(question)
+            plan = await self._trace_component(
+                trace,
+                context,
+                component_id="lead-planner",
+                role="planner",
+                operation="plan",
+                input_value=question,
+                awaitable=self.planner.plan(question),
+            )
             swarm = self.swarm_policy.decide(
                 question,
                 plan,
@@ -475,6 +517,8 @@ class DeepResearchAgent:
             "policy": type(self.swarm_policy).__name__,
             "policy_version": getattr(self.swarm_policy, "VERSION", None),
         }
+        role_decision = self._swarm_role_decision(swarm)
+        swarm_metadata["role_decision"] = role_decision
         run_metadata["swarm"] = swarm_metadata
         context.put_artifact("research_plan", plan)
         context.put_artifact("swarm_plan", swarm)
@@ -496,6 +540,11 @@ class DeepResearchAgent:
                         "event": "swarm_configured",
                         **swarm_metadata,
                     },
+                    {
+                        "at": utc_now(),
+                        "event": "swarm_role_decision",
+                        **role_decision,
+                    },
                 ]
             )
 
@@ -507,8 +556,9 @@ class DeepResearchAgent:
                 **{key: value for key, value in history.items() if key != "at"},
             }
             if self.run_store is not None:
-                self.run_store.checkpoint_node(run_id, runtime, event=event)
-                trace.append_already_persisted(event)
+                prepared = trace.prepare(event)
+                self.run_store.checkpoint_node(run_id, runtime, event=prepared)
+                trace.append_already_persisted(prepared)
             else:
                 trace.append(event)
 
@@ -616,12 +666,20 @@ class DeepResearchAgent:
         else:
             if self.run_store is not None:
                 self.run_store.set_phase(run_id, "synthesizing")
-            draft = await self.synthesizer.synthesize(
-                question,
-                plan,
-                evidences,
-                self.memory,
-                forced=forced_synthesis,
+            draft = await self._trace_component(
+                trace,
+                context,
+                component_id="report-synthesizer",
+                role="synthesizer",
+                operation="initial_synthesis",
+                input_value={"question": question, "evidence_count": len(evidences)},
+                awaitable=self.synthesizer.synthesize(
+                    question,
+                    plan,
+                    evidences,
+                    self.memory,
+                    forced=forced_synthesis,
+                ),
             )
             draft = self.repairer.normalize_citations(draft, evidences)
             draft, removed_markers = remove_omission_markers(draft)
@@ -665,9 +723,17 @@ class DeepResearchAgent:
                     "deadline_exceeded" if budget.deadline_exceeded() else "review_budget_exhausted"
                 )
                 budget.mark_stop(reason)
-                trace.append({"at": utc_now(), "event": "swarm_stop", "reason": reason})
+                self._record_stop(trace, budget, reason, round=review_round)
                 break
-            final_review = await self.reviewer.review(question, draft, evidences)
+            final_review = await self._trace_component(
+                trace,
+                context,
+                component_id="red-reviewer",
+                role="red_agent",
+                operation=f"review_round_{review_round}",
+                input_value={"question": question, "report": draft, "evidences": evidences},
+                awaitable=self.reviewer.review(question, draft, evidences),
+            )
             final_review = convergence.update(draft, final_review)
             trace.append(
                 {
@@ -686,10 +752,18 @@ class DeepResearchAgent:
                     "oscillating": final_review.oscillating,
                 }
             )
-            pre_repair_ledger = await self.repairer.verifier.build_ledger(
-                draft,
-                evidences,
-                previous_ledger=previous_ledger,
+            pre_repair_ledger = await self._trace_component(
+                trace,
+                context,
+                component_id="evidence-verifier",
+                role="evidence_verifier",
+                operation=f"pre_repair_round_{review_round}",
+                input_value={"report": draft, "evidences": evidences},
+                awaitable=self.repairer.verifier.build_ledger(
+                    draft,
+                    evidences,
+                    previous_ledger=previous_ledger,
+                ),
             )
             previous_ledger = pre_repair_ledger
             pre_support_rate = pre_repair_ledger.metrics.get("claim_support_rate", 0.0)
@@ -736,6 +810,27 @@ class DeepResearchAgent:
             trace.append(
                 {
                     "at": utc_now(),
+                    "event": "evidence_verifier_decision",
+                    "round": review_round,
+                    "triggered": quality_guardrail_action == "add_evidence_verifier",
+                    "action": quality_guardrail_action or "keep_current_roles",
+                    "reason": (
+                        "claim_support_below_minimum"
+                        if pre_support_rate < self.config.min_claim_support_rate
+                        else "claim_support_meets_minimum"
+                    ),
+                    "claim_support_rate": pre_support_rate,
+                    "minimum_claim_support_rate": self.config.min_claim_support_rate,
+                    "selected_role": (
+                        verification_agent_override.role
+                        if verification_agent_override is not None
+                        else None
+                    ),
+                }
+            )
+            trace.append(
+                {
+                    "at": utc_now(),
                     "event": "claim_evidence_alignment",
                     "round": review_round,
                     "stage": "before_targeted_retrieval",
@@ -750,14 +845,7 @@ class DeepResearchAgent:
                 claim_support_rate=pre_support_rate,
             )
             if stop_reason:
-                trace.append(
-                    {
-                        "at": utc_now(),
-                        "event": "swarm_stop",
-                        "reason": stop_reason,
-                        "round": review_round,
-                    }
-                )
+                self._record_stop(trace, budget, stop_reason, round=review_round)
                 break
 
             # Do not return a newly repaired draft without a final Red review.
@@ -766,13 +854,11 @@ class DeepResearchAgent:
                     BudgetResource.REVIEW_ROUND,
                     "review_budget_exhausted",
                 )
-                trace.append(
-                    {
-                        "at": utc_now(),
-                        "event": "swarm_stop",
-                        "reason": "review_budget_exhausted",
-                        "round": review_round,
-                    }
+                self._record_stop(
+                    trace,
+                    budget,
+                    "review_budget_exhausted",
+                    round=review_round,
                 )
                 break
 
@@ -803,10 +889,18 @@ class DeepResearchAgent:
                 evidences.extend(new_evidence)
 
             if verification_queries and new_evidence:
-                post_retrieval_ledger = await self.repairer.verifier.build_ledger(
-                    draft,
-                    evidences,
-                    previous_ledger=pre_repair_ledger,
+                post_retrieval_ledger = await self._trace_component(
+                    trace,
+                    context,
+                    component_id="evidence-verifier",
+                    role="evidence_verifier",
+                    operation=f"post_retrieval_round_{review_round}",
+                    input_value={"report": draft, "evidences": evidences},
+                    awaitable=self.repairer.verifier.build_ledger(
+                        draft,
+                        evidences,
+                        previous_ledger=pre_repair_ledger,
+                    ),
                 )
                 post_ledger_reused = False
             else:
@@ -879,12 +973,25 @@ class DeepResearchAgent:
                 )
 
             conservative = review_round >= 2
-            patch_result = await self.repairer.repair(
-                question,
-                draft,
-                evidences,
-                final_review,
-                conservative=conservative,
+            patch_result = await self._trace_component(
+                trace,
+                context,
+                component_id="blue-repairer",
+                role="blue_agent",
+                operation=f"structured_patch_round_{review_round}",
+                input_value={
+                    "question": question,
+                    "report": draft,
+                    "evidences": evidences,
+                    "review": final_review,
+                },
+                awaitable=self.repairer.repair(
+                    question,
+                    draft,
+                    evidences,
+                    final_review,
+                    conservative=conservative,
+                ),
             )
             if patch_result.changed:
                 draft = self.repairer.normalize_citations(patch_result.report, evidences)
@@ -943,14 +1050,22 @@ class DeepResearchAgent:
                     "的证据 ID。删除所有仍受争议、重复或仅为完整性而添加的事实。宁可"
                     "明确证据不足，也不要维持未经证实的覆盖面。"
                 )
-            draft = await self.synthesizer.synthesize(
-                question,
-                plan,
-                evidences,
-                self.memory,
-                draft=draft,
-                repair_instructions=instructions,
-                forced=forced_synthesis,
+            draft = await self._trace_component(
+                trace,
+                context,
+                component_id="report-synthesizer",
+                role="synthesizer",
+                operation=f"rewrite_fallback_round_{review_round}",
+                input_value={"report": draft, "instructions": instructions},
+                awaitable=self.synthesizer.synthesize(
+                    question,
+                    plan,
+                    evidences,
+                    self.memory,
+                    draft=draft,
+                    repair_instructions=instructions,
+                    forced=forced_synthesis,
+                ),
             )
             draft = self.repairer.normalize_citations(draft, evidences)
             draft, removed_markers = remove_omission_markers(draft)
@@ -985,10 +1100,18 @@ class DeepResearchAgent:
                 }
             )
 
-        claim_ledger = await self.repairer.verifier.build_ledger(
-            draft,
-            evidences,
-            previous_ledger=previous_ledger,
+        claim_ledger = await self._trace_component(
+            trace,
+            context,
+            component_id="evidence-verifier",
+            role="evidence_verifier",
+            operation="final_ledger",
+            input_value={"report": draft, "evidences": evidences},
+            awaitable=self.repairer.verifier.build_ledger(
+                draft,
+                evidences,
+                previous_ledger=previous_ledger,
+            ),
         )
         final_claim_patch = self.repairer.repair_claim_gaps(
             draft,
@@ -1000,10 +1123,18 @@ class DeepResearchAgent:
                 final_claim_patch.report,
                 evidences,
             )
-            claim_ledger = await self.repairer.verifier.build_ledger(
-                draft,
-                evidences,
-                previous_ledger=claim_ledger,
+            claim_ledger = await self._trace_component(
+                trace,
+                context,
+                component_id="evidence-verifier",
+                role="evidence_verifier",
+                operation="verify_final_claim_patch",
+                input_value={"report": draft, "evidences": evidences},
+                awaitable=self.repairer.verifier.build_ledger(
+                    draft,
+                    evidences,
+                    previous_ledger=claim_ledger,
+                ),
             )
             final_review = refresh_review_after_deterministic_claim_patch(
                 final_review,
@@ -1052,31 +1183,74 @@ class DeepResearchAgent:
                 or claim_support_rate < self.config.min_claim_support_rate
             )
         )
+        fallback_trigger_reasons: list[str] = []
+        if fixed_fallback_requested:
+            fallback_trigger_reasons.append("guardrail_requested_fixed_harness")
+        if final_citation_coverage < self.config.min_citation_coverage:
+            fallback_trigger_reasons.append("citation_coverage_below_minimum")
+        if claim_support_rate < self.config.min_claim_support_rate:
+            fallback_trigger_reasons.append("claim_support_below_minimum")
+        if not self.config.enable_dynamic_swarm:
+            fallback_trigger_reasons.append("dynamic_swarm_disabled")
+        if forced_synthesis:
+            fallback_trigger_reasons.append("forced_synthesis_skips_fallback")
+        trace.append(
+            {
+                "at": utc_now(),
+                "event": "fixed_fallback_decision",
+                "triggered": fallback_triggered,
+                "reasons": fallback_trigger_reasons or ["quality_gates_passed"],
+                "observed": {
+                    "citation_coverage": final_citation_coverage,
+                    "claim_support_rate": claim_support_rate,
+                },
+                "thresholds": {
+                    "min_citation_coverage": self.config.min_citation_coverage,
+                    "min_claim_support_rate": self.config.min_claim_support_rate,
+                },
+            }
+        )
         fallback_selected = False
         fallback_selection_reason = "not_triggered"
         fallback_candidate_metrics: dict[str, Any] = {}
         if fallback_triggered:
             if "fallback_fixed_harness" not in budget.quality_guardrail_actions:
                 budget.quality_guardrail_actions.append("fallback_fixed_harness")
-            fallback_report = await self.synthesizer.synthesize(
-                question,
-                plan,
-                evidences,
-                self.memory,
-                draft=draft,
-                repair_instructions=[
-                    "FIXED_HARNESS_QUALITY_FALLBACK：忽略动态角色的扩展性写作，只使用"
-                    "证据目录中能够逐句直接支持的事实生成紧凑报告；每个事实句紧邻有效"
-                    "证据 ID；删除推断越界和部分支持的复合断言；证据缺口只合并声明一次。"
-                ],
-                forced=False,
+            fallback_report = await self._trace_component(
+                trace,
+                context,
+                component_id="report-synthesizer",
+                role="synthesizer",
+                operation="fixed_harness_fallback",
+                input_value={"report": draft, "evidence_count": len(evidences)},
+                awaitable=self.synthesizer.synthesize(
+                    question,
+                    plan,
+                    evidences,
+                    self.memory,
+                    draft=draft,
+                    repair_instructions=[
+                        "FIXED_HARNESS_QUALITY_FALLBACK：忽略动态角色的扩展性写作，只使用"
+                        "证据目录中能够逐句直接支持的事实生成紧凑报告；每个事实句紧邻有效"
+                        "证据 ID；删除推断越界和部分支持的复合断言；证据缺口只合并声明一次。"
+                    ],
+                    forced=False,
+                ),
             )
             fallback_report = self.repairer.normalize_citations(fallback_report, evidences)
             fallback_report, removed_markers = remove_omission_markers(fallback_report)
-            fallback_ledger = await self.repairer.verifier.build_ledger(
-                fallback_report,
-                evidences,
-                previous_ledger=claim_ledger,
+            fallback_ledger = await self._trace_component(
+                trace,
+                context,
+                component_id="evidence-verifier",
+                role="evidence_verifier",
+                operation="fixed_fallback_ledger",
+                input_value={"report": fallback_report, "evidences": evidences},
+                awaitable=self.repairer.verifier.build_ledger(
+                    fallback_report,
+                    evidences,
+                    previous_ledger=claim_ledger,
+                ),
             )
             fallback_claim_patch = self.repairer.repair_claim_gaps(
                 fallback_report,
@@ -1088,15 +1262,31 @@ class DeepResearchAgent:
                     fallback_claim_patch.report,
                     evidences,
                 )
-                fallback_ledger = await self.repairer.verifier.build_ledger(
+                fallback_ledger = await self._trace_component(
+                    trace,
+                    context,
+                    component_id="evidence-verifier",
+                    role="evidence_verifier",
+                    operation="verify_fixed_fallback_patch",
+                    input_value={"report": fallback_report, "evidences": evidences},
+                    awaitable=self.repairer.verifier.build_ledger(
+                        fallback_report,
+                        evidences,
+                        previous_ledger=fallback_ledger,
+                    ),
+                )
+            fallback_review = await self._trace_component(
+                trace,
+                context,
+                component_id="red-reviewer",
+                role="red_agent",
+                operation="fixed_fallback_review",
+                input_value={"report": fallback_report, "evidences": evidences},
+                awaitable=self.reviewer.review(
+                    question,
                     fallback_report,
                     evidences,
-                    previous_ledger=fallback_ledger,
-                )
-            fallback_review = await self.reviewer.review(
-                question,
-                fallback_report,
-                evidences,
+                ),
             )
             primary_candidate = ReportQualityCandidate(
                 draft,
@@ -1287,7 +1477,12 @@ class DeepResearchAgent:
         counts: dict[str, int] = {}
         for runtime in state.tasks.values():
             counts[runtime.status.value] = counts.get(runtime.status.value, 0) + 1
+        finished_at = utc_now()
+        run_usage = context.usage_snapshot()
         metrics = {
+            "trace_id": trace_id,
+            "trace_schema_version": TRACE_SCHEMA_VERSION,
+            "llm_usage": run_usage,
             "task_status_counts": counts,
             "evidence_count": len(evidences),
             "source_count": len(sources),
@@ -1348,6 +1543,24 @@ class DeepResearchAgent:
             "swarm_max_concurrency": swarm.max_concurrency,
             "budget": budget.snapshot(),
         }
+        trace.append(
+            {
+                "at": finished_at,
+                "event": "run_finalized",
+                "run_id": run_id,
+                "status": status,
+                "duration_ms": duration_ms(started_at, finished_at),
+                "token_usage": {
+                    "prompt": run_usage.get("prompt_tokens", 0),
+                    "completion": run_usage.get("completion_tokens", 0),
+                    "total": run_usage.get("total_tokens", 0),
+                    "measurement": run_usage.get("measurement", "unavailable"),
+                },
+                "cost_usd": run_usage.get("cost_usd", 0.0),
+                "retry_count": run_usage.get("retry_count", 0),
+                "stop_reasons": list(budget.stop_reasons),
+            }
+        )
         trace.extend(context.events)
         trace.sort(key=lambda item: item["at"])
         if self.run_store is not None:
@@ -1366,7 +1579,7 @@ class DeepResearchAgent:
             metrics=metrics,
             trace=list(trace),
             started_at=started_at,
-            finished_at=utc_now(),
+            finished_at=finished_at,
         )
 
     async def _execute_plan(
@@ -1384,13 +1597,7 @@ class DeepResearchAgent:
         while not state.complete:
             if budget.deadline_exceeded():
                 self._cancel_unfinished(state, "deadline_exceeded")
-                trace.append(
-                    {
-                        "at": utc_now(),
-                        "event": "swarm_stop",
-                        "reason": "deadline_exceeded",
-                    }
-                )
+                self._record_stop(trace, budget, "deadline_exceeded")
                 break
             ready = state.refresh_ready()
             if not ready:
@@ -1438,13 +1645,11 @@ class DeepResearchAgent:
             )
             if evidence_stop:
                 self._cancel_unfinished(state, evidence_stop)
-                trace.append(
-                    {
-                        "at": utc_now(),
-                        "event": "swarm_stop",
-                        "reason": evidence_stop,
-                        "evidence_count": len(evidences),
-                    }
+                self._record_stop(
+                    trace,
+                    budget,
+                    evidence_stop,
+                    evidence_count=len(evidences),
                 )
                 break
 
@@ -1458,10 +1663,21 @@ class DeepResearchAgent:
                 reason = ", ".join(
                     sorted({item.failure_kind or "unknown" for item in batch_failures})
                 )
-                replacements = await self.planner.replan(
-                    plan,
-                    [item.runtime.spec for item in batch_failures],
-                    reason,
+                replacements = await self._trace_component(
+                    trace,
+                    context,
+                    component_id="lead-planner",
+                    role="planner",
+                    operation=f"replan_{replans + 1}",
+                    input_value={
+                        "failed_tasks": [item.runtime.spec.subtask_id for item in batch_failures],
+                        "reason": reason,
+                    },
+                    awaitable=self.planner.replan(
+                        plan,
+                        [item.runtime.spec for item in batch_failures],
+                        reason,
+                    ),
                 )
                 if replacements:
                     replans += 1
@@ -1623,6 +1839,179 @@ class DeepResearchAgent:
             evidence.metadata.setdefault("agent_id", agent_spec.agent_id)
             evidence.metadata.setdefault("agent_role", agent_spec.role)
         return evidences
+
+    async def _trace_component(
+        self,
+        trace: list[dict[str, Any]],
+        context: RunContext,
+        *,
+        component_id: str,
+        role: str,
+        operation: str,
+        input_value: Any,
+        awaitable: Any,
+    ) -> Any:
+        """Trace non-worker agents with the same telemetry contract as workers."""
+
+        started_at = utc_now()
+        trace_id = str(context.metadata.get("trace_id") or context.run_id)
+        span_id = stable_span_id(
+            trace_id,
+            "component",
+            f"{component_id}:{operation}:{uuid.uuid4().hex}",
+        )
+        usage_before = context.usage_snapshot()
+        input_summary = summarize_value(input_value)
+        trace.append(
+            {
+                "at": started_at,
+                "event": "component_started",
+                "span_id": span_id,
+                "component_id": component_id,
+                "agent_id": component_id,
+                "role": role,
+                "operation": operation,
+                "input_summary": input_summary,
+            }
+        )
+        try:
+            output = await awaitable
+        except BaseException as exc:
+            finished_at = utc_now()
+            telemetry = usage_delta(usage_before, context.usage_snapshot())
+            trace.append(
+                {
+                    "at": finished_at,
+                    "event": "component_failed",
+                    "span_id": span_id,
+                    "component_id": component_id,
+                    "agent_id": component_id,
+                    "role": role,
+                    "operation": operation,
+                    "duration_ms": duration_ms(started_at, finished_at),
+                    "retry_count": telemetry["retry_count"],
+                    "token_usage": {
+                        "prompt": telemetry["prompt_tokens"],
+                        "completion": telemetry["completion_tokens"],
+                        "total": telemetry["total_tokens"],
+                        "measurement": telemetry["measurement"],
+                    },
+                    "cost_usd": telemetry["cost_usd"],
+                    "error_type": type(exc).__name__,
+                }
+            )
+            raise
+        finished_at = utc_now()
+        telemetry = usage_delta(usage_before, context.usage_snapshot())
+        trace.append(
+            {
+                "at": finished_at,
+                "event": "component_completed",
+                "span_id": span_id,
+                "component_id": component_id,
+                "agent_id": component_id,
+                "role": role,
+                "operation": operation,
+                "duration_ms": duration_ms(started_at, finished_at),
+                "input_summary": input_summary,
+                "output_summary": summarize_value(output),
+                "retry_count": telemetry["retry_count"],
+                "token_usage": {
+                    "prompt": telemetry["prompt_tokens"],
+                    "completion": telemetry["completion_tokens"],
+                    "total": telemetry["total_tokens"],
+                    "measurement": telemetry["measurement"],
+                },
+                "cost_usd": telemetry["cost_usd"],
+            }
+        )
+        return output
+
+    @staticmethod
+    def _swarm_role_decision(swarm: SwarmPlan) -> dict[str, Any]:
+        selected = [agent.role for agent in swarm.agents]
+        canonical = [
+            "researcher",
+            "scope_researcher",
+            "evidence_researcher",
+            "counter_researcher",
+            "impact_analyst",
+            "evidence_verifier",
+        ]
+        reasons = {
+            "researcher": "Focused or fixed orchestration uses the base retrieval worker.",
+            "scope_researcher": "Clarifies scope and definitions for a multi-stage task.",
+            "evidence_researcher": "Collects primary evidence for standard and complex tasks.",
+            "counter_researcher": "Actively searches for counter-evidence and limitations.",
+            "impact_analyst": "Complex tasks require risk and trade-off analysis.",
+            "evidence_verifier": "Complex tasks reserve a role for disputed claim verification.",
+        }
+        if "dynamic_swarm_disabled" in swarm.signals:
+            action = "fixed"
+            explanation = (
+                "Dynamic Swarm is disabled; the base worker and configured budgets are kept."
+            )
+        elif len(selected) == 1:
+            action = "scale_down"
+            explanation = "Complexity stayed below the role-expansion threshold."
+        elif len(selected) >= 5:
+            action = "scale_up"
+            explanation = "Complexity signals crossed the complex threshold, enabling all roles."
+        else:
+            action = "balanced"
+            explanation = "The standard tier adds scope, evidence and counter-evidence roles."
+        return {
+            "action": action,
+            "complexity_level": swarm.level.value,
+            "complexity_score": swarm.complexity_score,
+            "signals": list(swarm.signals),
+            "selected_roles": selected,
+            "omitted_roles": [role for role in canonical if role not in selected],
+            "role_reasons": {
+                role: reasons.get(role, "Selected by the Swarm policy.") for role in selected
+            },
+            "explanation": explanation,
+            "max_concurrency": swarm.max_concurrency,
+            "max_worker_invocations": swarm.max_worker_invocations,
+        }
+
+    @staticmethod
+    def _record_stop(
+        trace: list[dict[str, Any]],
+        budget: BudgetController,
+        reason: str,
+        **details: Any,
+    ) -> None:
+        limits = budget.limits
+        observed: dict[str, Any] = {}
+        threshold: dict[str, Any] = {}
+        if reason == "deadline_exceeded":
+            observed["elapsed_seconds"] = round(budget.elapsed_seconds, 3)
+            threshold["max_elapsed_seconds"] = budget.swarm.max_elapsed_seconds
+        elif reason == "review_budget_exhausted":
+            observed["review_rounds"] = budget.used[BudgetResource.REVIEW_ROUND.value]
+            threshold["max_review_rounds"] = limits[BudgetResource.REVIEW_ROUND.value]
+        elif reason == "evidence_saturated":
+            observed["stagnant_evidence_batches"] = budget.snapshot().get(
+                "stagnant_evidence_batches"
+            )
+            threshold["patience"] = budget.swarm.evidence_stagnation_patience
+        trace.append(
+            {
+                "at": utc_now(),
+                "event": "swarm_stop",
+                "reason": reason,
+                "trigger": {
+                    "observed": observed,
+                    "threshold": threshold,
+                    "budget_used": dict(budget.used),
+                    "budget_remaining": {
+                        name: max(0, limit - budget.used[name]) for name, limit in limits.items()
+                    },
+                },
+                **details,
+            }
+        )
 
     @staticmethod
     def _cancel_unfinished(state: ResearchRunState, reason: str) -> None:
