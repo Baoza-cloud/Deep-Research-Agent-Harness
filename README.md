@@ -158,6 +158,30 @@ python3 -m research_engine "研究问题" \
   --web-weight 1.0
 ```
 
+默认运行检查点保存在 `data/research_runs.sqlite3`。为任务指定稳定的幂等键：
+
+```bash
+python3 -m research_engine "研究问题" \
+  --provider deepseek \
+  --search-provider tavily \
+  --run-id production-run-001
+```
+
+进程崩溃或全局超时后，从失败节点继续；已经成功的 DAG 节点直接复用持久化证据，不重复调用模型或检索：
+
+```bash
+python3 -m research_engine --resume production-run-001
+```
+
+只从持久化 Trace 确定性重建运行，不访问模型、检索后端或共享记忆：
+
+```bash
+python3 -m research_engine --replay production-run-001 \
+  --output evaluation/production-run-001-replay.json
+```
+
+可用 `--run-store /path/to/runs.sqlite3` 指定独立运行库。运行库与跨 Agent 共享记忆分离，均被 Git 忽略。
+
 原有本地 RAG 流水线可独立运行：
 
 ```bash
@@ -266,7 +290,10 @@ ResearchBench-Adversarial v0.1，35 题 × 3 次：
 - **单任务超时**：`timed_out → degraded`，保留已有证据继续下游任务。
 - **批量失败**：达到失败比例阈值后动态 replan，并拒绝冲突或成环节点。
 - **全局超时**：取消未完成任务，使用已持久化证据强制合成，状态为 `partial_timeout`。
-- **断点续跑**：按 `pair_key` 复用成功样本，校验数据集 SHA、模型、重复次数和 Policy 兼容性。
+- **运行时检查点**：SQLite 分表持久化 Run、DAG 节点、九状态历史、节点证据输出、预算、Trace、中间报告和最终结果。
+- **`run_id` 续跑**：成功节点保持不可变并直接复用；失败、运行中、超时、取消和降级节点恢复为待调度状态。墙钟 deadline 开启新窗口，累计调用预算不清零。
+- **幂等与 Replay**：完成后的重复提交直接返回原结果；未完成的重复提交必须显式 `--resume`；`--replay` 校验 Trace 和节点输出 SHA256 后确定性重建，不执行外部调用。
+- **评测断点续跑**：按 `pair_key` 复用成功样本，校验数据集 SHA、模型、重复次数和 Policy 兼容性。
 - **检索安全**：网页正文按不可信数据处理，检测并脱敏指令覆盖、密钥窃取和工具调用型 Prompt Injection。
 - **Patch 安全**：拒绝未知 Evidence ID、歧义 target、非法 DELETE、无效替换和超限增长；验证失败自动回滚。
 - **Claim 质量门禁**：检测时间、数值、实体冲突；低支持率时定向补证据、降低表述强度或删除陈述。
@@ -288,7 +315,7 @@ python3 -m pip install --no-deps -e .
 # 验证模块入口
 python3 -m research_engine --help
 
-# 运行按子系统拆分的 113 项离线测试
+# 运行按子系统拆分的 118 项离线测试
 python3 -m pytest -q tests
 
 # 零 Key、零网络、零本地索引 smoke test

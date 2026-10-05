@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import hashlib
 import re
 import time
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Protocol, Sequence
+from typing import Any, Callable, Protocol, Sequence
 
 from .config import ResearchConfig
 from .harness import AgentSpec
@@ -339,9 +340,50 @@ class BudgetController:
     _stagnant_reviews: int = 0
     _stagnant_evidence_batches: int = 0
     _evidence_fingerprints: set[str] = field(default_factory=set, init=False)
+    _elapsed_offset: float = field(default=0.0, init=False)
+    _checkpoint_hook: Callable[[dict[str, Any]], None] | None = field(
+        default=None,
+        init=False,
+        repr=False,
+    )
 
     def __post_init__(self) -> None:
         self.used = {resource.value: 0 for resource in BudgetResource}
+
+    @classmethod
+    def restore(cls, swarm: SwarmPlan, snapshot: dict[str, Any]) -> "BudgetController":
+        controller = cls(swarm)
+        controller.used.update(
+            {
+                key: int(value)
+                for key, value in (snapshot.get("used") or {}).items()
+                if key in controller.used
+            }
+        )
+        controller.exhausted = set(snapshot.get("exhausted") or [])
+        controller.stop_reasons = [
+            value for value in (snapshot.get("stop_reasons") or []) if value != "deadline_exceeded"
+        ]
+        controller.review_scores = list(snapshot.get("review_scores") or [])
+        controller.claim_support_rates = list(snapshot.get("claim_support_rates") or [])
+        controller.quality_utility_scores = list(snapshot.get("quality_utility_scores") or [])
+        controller.quality_guardrail_actions = list(snapshot.get("quality_guardrail_actions") or [])
+        controller._stagnant_reviews = int(snapshot.get("stagnant_reviews", 0))
+        controller._stagnant_evidence_batches = int(snapshot.get("stagnant_evidence_batches", 0))
+        controller._evidence_fingerprints = set(
+            (snapshot.get("internal") or {}).get("evidence_fingerprints", [])
+        )
+        controller._elapsed_offset = float(snapshot.get("elapsed_seconds", 0.0))
+        controller.started_at = time.monotonic()
+        return controller
+
+    def bind_checkpoint(self, hook: Callable[[dict[str, Any]], None]) -> None:
+        self._checkpoint_hook = hook
+        self._checkpoint()
+
+    def _checkpoint(self) -> None:
+        if self._checkpoint_hook is not None:
+            self._checkpoint_hook(self.snapshot(include_internal=True))
 
     @property
     def limits(self) -> dict[str, int]:
@@ -364,18 +406,24 @@ class BudgetController:
             return False
         if amount > self.remaining(name):
             self.exhausted.add(name)
+            self._checkpoint()
             return False
         self.used[name] += amount
+        self._checkpoint()
         return True
 
     def deadline_exceeded(self) -> bool:
-        if self.elapsed_seconds >= self.swarm.max_elapsed_seconds:
+        if self.attempt_elapsed_seconds >= self.swarm.max_elapsed_seconds:
             self.mark_stop("deadline_exceeded")
             return True
         return False
 
     @property
     def elapsed_seconds(self) -> float:
+        return self._elapsed_offset + self.attempt_elapsed_seconds
+
+    @property
+    def attempt_elapsed_seconds(self) -> float:
         return max(0.0, time.monotonic() - self.started_at)
 
     def observe_review(
@@ -425,6 +473,7 @@ class BudgetController:
                 and self._stagnant_reviews >= self.swarm.diminishing_returns_patience
             ):
                 return self.mark_stop("diminishing_returns")
+        self._checkpoint()
         return None
 
     def observe_claim_support(
@@ -450,6 +499,7 @@ class BudgetController:
             )
         if action and action not in self.quality_guardrail_actions:
             self.quality_guardrail_actions.append(action)
+        self._checkpoint()
         return action
 
     def observe_evidence_batch(
@@ -459,7 +509,9 @@ class BudgetController:
         if not evidences or self.swarm.evidence_stagnation_patience == 0:
             return None
         fingerprints = {
-            re.sub(r"\s+", " ", evidence.content).strip().casefold()
+            hashlib.sha256(
+                re.sub(r"\s+", " ", evidence.content).strip().casefold().encode("utf-8")
+            ).hexdigest()
             for evidence in evidences
             if evidence.content.strip()
         }
@@ -467,15 +519,18 @@ class BudgetController:
         self._evidence_fingerprints.update(fingerprints)
         if novel:
             self._stagnant_evidence_batches = 0
+            self._checkpoint()
             return None
         self._stagnant_evidence_batches += 1
         if self._stagnant_evidence_batches >= self.swarm.evidence_stagnation_patience:
             return self.mark_stop("evidence_saturated")
+        self._checkpoint()
         return None
 
     def mark_stop(self, reason: str) -> str:
         if reason not in self.stop_reasons:
             self.stop_reasons.append(reason)
+        self._checkpoint()
         return reason
 
     def mark_exhausted(
@@ -484,11 +539,12 @@ class BudgetController:
         reason: str,
     ) -> str:
         self.exhausted.add(BudgetResource(resource).value)
+        self._checkpoint()
         return self.mark_stop(reason)
 
-    def snapshot(self) -> dict[str, Any]:
+    def snapshot(self, *, include_internal: bool = False) -> dict[str, Any]:
         limits = self.limits
-        return {
+        snapshot = {
             "limits": limits,
             "used": dict(self.used),
             "remaining": {name: max(0, limit - self.used[name]) for name, limit in limits.items()},
@@ -506,5 +562,11 @@ class BudgetController:
             ),
             "unique_evidence_count": len(self._evidence_fingerprints),
             "stagnant_evidence_batches": self._stagnant_evidence_batches,
+            "stagnant_reviews": self._stagnant_reviews,
             "elapsed_seconds": round(self.elapsed_seconds, 6),
         }
+        if include_internal:
+            snapshot["internal"] = {
+                "evidence_fingerprints": sorted(self._evidence_fingerprints),
+            }
+        return snapshot

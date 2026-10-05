@@ -108,9 +108,17 @@ class RunContext:
     artifacts: dict[str, Any] = field(default_factory=dict)
     events: list[dict[str, Any]] = field(default_factory=list)
     tools: ToolRegistry | None = None
+    event_sink: Callable[[dict[str, Any]], None] | None = field(
+        default=None,
+        repr=False,
+        compare=False,
+    )
 
     def emit(self, event: str, **payload: Any) -> None:
-        self.events.append({"at": utc_now(), "event": event, **payload})
+        record = {"at": utc_now(), "event": event, **payload}
+        self.events.append(record)
+        if self.event_sink is not None:
+            self.event_sink(record)
 
     def put_artifact(self, key: str, value: Any) -> None:
         if not key.strip():

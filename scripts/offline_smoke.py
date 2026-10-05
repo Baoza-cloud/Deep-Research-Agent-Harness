@@ -37,6 +37,8 @@ def main() -> int:
             "fixture",
             "--memory",
             str(temp_path / "memory.sqlite3"),
+            "--run-store",
+            str(temp_path / "runs.sqlite3"),
             "--output",
             str(result_path),
             "--task-timeout",
