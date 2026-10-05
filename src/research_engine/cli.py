@@ -15,6 +15,7 @@ from .llm_backends import auto_provider, build_llm
 from .orchestrator import DeepResearchAgent, default_memory_path, default_run_store_path
 from .persistence import RunStore
 from .planner import HeuristicPlanner, LLMPlanner
+from .trace_viewer import render_trace_html
 from .web_backends import CompositeSearchBackend, TavilySearchBackend
 
 
@@ -88,6 +89,11 @@ async def async_main(args: argparse.Namespace) -> int:
         output = json.dumps(payload, ensure_ascii=False, indent=2)
         if args.output:
             Path(args.output).write_text(output, encoding="utf-8")
+        if args.trace_html:
+            Path(args.trace_html).write_text(
+                render_trace_html(payload),
+                encoding="utf-8",
+            )
         print(output)
         return 0
 
@@ -143,6 +149,11 @@ async def async_main(args: argparse.Namespace) -> int:
     output = json.dumps(result.to_dict(), ensure_ascii=False, indent=2)
     if args.output:
         Path(args.output).write_text(output, encoding="utf-8")
+    if args.trace_html:
+        Path(args.trace_html).write_text(
+            render_trace_html(result.to_dict()),
+            encoding="utf-8",
+        )
     print(output)
     return 0
 
@@ -193,6 +204,10 @@ def main() -> int:
     parser.add_argument("--local-weight", type=float, default=1.2)
     parser.add_argument("--web-weight", type=float, default=1.0)
     parser.add_argument("--output", help="Optional JSON result path")
+    parser.add_argument(
+        "--trace-html",
+        help="Render a self-contained local HTML Trace Viewer",
+    )
     parser.add_argument("--memory", help="SQLite memory path")
     parser.add_argument(
         "--run-store",

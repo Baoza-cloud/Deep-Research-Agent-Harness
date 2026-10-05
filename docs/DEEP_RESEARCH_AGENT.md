@@ -226,7 +226,32 @@ Dynamic 结果低于门槛或明显弱于 Fixed 时，系统生成 Fixed Harness
 
 `RunStore.replay(run_id)` 只读取持久化事件、节点输出、预算和报告，并验证事件及节点输出 SHA256。Replay 不初始化模型、不调用检索、不写共享记忆；相同数据库快照会产生相同 Replay 结果。
 
-### 10.2 评测恢复
+### 10.2 结构化 Trace 与本地 Viewer
+
+每个新 Run 生成独立 `trace_id`。事件信封固定包含：
+
+- `trace_schema_version`、`trace_id`、`event_id` 和单调递增 `sequence`
+- `at`、`category`、`phase` 和向后兼容的 `event`
+- Agent/组件事件的 `span_id`、角色、操作、输入输出摘要、耗时、Token、成本和重试次数
+
+Worker 由 `LocalAgentRuntime` 计量；Planner、Synthesizer、Red Reviewer、Structured Patch Blue 和 Evidence Verifier 使用相同的组件 Span 契约。OpenAI-compatible 后端读取 Provider 返回的精确 Token usage，并在显式重试层累计重试与按配置费率计算的成本；离线或不提供 usage 的后端明确标记为 `unavailable`，不会伪造精确 Token。
+
+控制面事件单独记录：
+
+- `swarm_role_decision`：复杂度信号、选择/省略角色、并发和 Worker 预算，以及扩缩容解释
+- `evidence_verifier_decision`：是否增加 Verifier、当前 Claim 支持率和门槛
+- `fixed_fallback_decision`：是否触发 Fixed 候选、具体触发原因和质量阈值
+- `swarm_stop`：停止原因、观测值、阈值、已用与剩余预算
+
+结果 JSON 本身就是可移植 Trace Bundle。可在运行时用 `--trace-html` 输出自包含 HTML，或离线转换已有结果/Replay：
+
+```bash
+deep-research-trace evaluation/run.json --output evaluation/run-trace.html
+```
+
+Viewer 以 DAG、并发瀑布图、Agent 遥测表和决策面板展示完整链路，同时内置 Harness 与普通单 Agent/链式框架的执行、质量和恢复差异说明。当前实现不依赖 OpenTelemetry；结构化事件与 Span 字段为后续 OTel exporter 保留了稳定映射边界。
+
+### 10.3 评测恢复
 
 评测仍支持 `--resume-from`：按 `pair_key` 复用成功行，只补跑失败项，并校验数据集 SHA256、Provider、Model、重复次数、Policy 版本、复杂度档位和预算兼容性。运行时 `run_id` 恢复与批量评测恢复互相独立。
 
