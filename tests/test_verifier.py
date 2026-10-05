@@ -1,9 +1,23 @@
 # ruff: noqa: F403, F405
 
 from tests._support import *
+from research_engine.claims import extract_claims
 
 
 class VerifierTests(unittest.IsolatedAsyncioTestCase):
+    def test_claim_extraction_atomizes_chinese_sentences_with_trailing_citations(self):
+        claims = extract_claims(
+            "# 报告\n\n"
+            "Gateway API v1.0 已发布。 [facts-E1] "
+            "Gateway API v1.5 的发布日期仍需核验。 [facts-E2]"
+        )
+
+        self.assertEqual(len(claims), 2)
+        self.assertEqual(claims[0].text, "Gateway API v1.0 已发布。")
+        self.assertEqual(claims[0].citations, ["facts-E1"])
+        self.assertEqual(claims[1].text, "Gateway API v1.5 的发布日期仍需核验。")
+        self.assertEqual(claims[1].citations, ["facts-E2"])
+
     async def test_claim_ledger_uses_semantic_entailment_judgment(self):
         async def verifier_llm(prompt):
             self.assertIn("Claim–Evidence", prompt)
