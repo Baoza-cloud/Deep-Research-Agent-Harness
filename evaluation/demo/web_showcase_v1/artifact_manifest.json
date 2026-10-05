@@ -1,0 +1,151 @@
+{
+  "source_commit": "ad3331f3a148561d15d8698618979a47754232e4",
+  "raw_run_sha256": "42d2295bc3d0b01cb14ef4b475c03ab3642c93ab3d9304ccc9c04d234d61e9f7",
+  "trace_bundle_sha256": "5f7255f81a5654e482db313d352d90385488ef48eaa12ab04c8a296af42785c8",
+  "final_report_sha256": "4cc49207c24485370b1b66fc9502b77d958b55b7d804a87001f13ee44ac39a58",
+  "summary": {
+    "status": "completed_with_evidence_gaps",
+    "duration_seconds": 126.362,
+    "dag_task_count": 8,
+    "swarm": {
+      "level": "complex",
+      "complexity_score": 0.92,
+      "signals": [
+        "large_dag",
+        "long_question",
+        "comparison",
+        "high_stakes",
+        "additional_dimensions",
+        "many_constraints"
+      ],
+      "agent_count": 5,
+      "agents": [
+        {
+          "agent_id": "research-worker-scope",
+          "role": "scope_researcher",
+          "tool_names": [
+            "retrieval"
+          ]
+        },
+        {
+          "agent_id": "research-worker-evidence",
+          "role": "evidence_researcher",
+          "tool_names": [
+            "retrieval"
+          ]
+        },
+        {
+          "agent_id": "research-worker-counter",
+          "role": "counter_researcher",
+          "tool_names": [
+            "retrieval"
+          ]
+        },
+        {
+          "agent_id": "research-worker-impact",
+          "role": "impact_analyst",
+          "tool_names": [
+            "retrieval"
+          ]
+        },
+        {
+          "agent_id": "research-worker-verify",
+          "role": "evidence_verifier",
+          "tool_names": [
+            "retrieval"
+          ]
+        }
+      ],
+      "max_concurrency": 4,
+      "max_worker_invocations": 18,
+      "max_replans": 1,
+      "max_review_rounds": 4,
+      "max_verification_queries": 12,
+      "max_elapsed_seconds": 600.0,
+      "diminishing_returns_patience": 2,
+      "evidence_stagnation_patience": 3,
+      "min_score_improvement": 0.015,
+      "policy": "HeuristicSwarmPolicy",
+      "policy_version": "heuristic-v4"
+    },
+    "retrieval": {
+      "batches": 12,
+      "candidate_count": 104,
+      "selected_count": 52,
+      "filtered_count": 52,
+      "removal_reasons": {
+        "result_limit": 49,
+        "duplicate_content": 1,
+        "below_role_threshold": 2
+      },
+      "selected_source_classes": {
+        "official_documentation": 16,
+        "web": 34,
+        "source_repository": 2
+      }
+    },
+    "claim_verification": {
+      "claim_count": 90.0,
+      "reviewable_claim_count": 82.0,
+      "supported_claim_count": 80.0,
+      "partially_supported_claim_count": 1.0,
+      "contradicted_claim_count": 0.0,
+      "uncited_claim_count": 1.0,
+      "insufficient_claim_count": 0.0,
+      "unknown_claim_count": 0.0,
+      "unsupported_claim_count": 2.0,
+      "claim_support_rate": 0.975609756097561,
+      "citation_correctness": 0.9411764705882353,
+      "aligned_uncited_support_count": 3.0,
+      "time_conflict_count": 0.0,
+      "number_conflict_count": 0.0,
+      "entity_conflict_count": 0.0,
+      "evidence_gap_statement_count": 0.0,
+      "verification_pair_count": 5.0,
+      "semantic_judged_pair_count": 5.0,
+      "semantic_unverified_pair_count": 0.0,
+      "semantic_cache_hit_count": 5.0,
+      "semantic_cache_miss_count": 0.0,
+      "semantic_cache_size": 114.0,
+      "reused_unchanged_claim_count": 80.0
+    },
+    "red_blue": {
+      "review_rounds": 2,
+      "repair_events": 2,
+      "applied_patch_count": 8,
+      "rejected_patch_count": 1,
+      "patch_actions": {
+        "MODIFY": 7,
+        "DELETE": 1
+      },
+      "rewrite_fallbacks": 0
+    },
+    "incremental_verification": {
+      "alignment_events": 3,
+      "final_reused_unchanged_claim_count": 80.0
+    },
+    "quality_guard_triggered": false,
+    "quality_guard": {},
+    "quality_guard_selected_fixed": false,
+    "prompt_injection_evidence_count": 0,
+    "completion_issue_reasons": [
+      "partially_supported_claims",
+      "uncited_claims"
+    ],
+    "event_counts": {
+      "plan_created": 1,
+      "swarm_configured": 1,
+      "task_transition": 24,
+      "agent_started": 12,
+      "role_strategy_applied": 12,
+      "retrieval_filter_applied": 12,
+      "agent_completed": 12,
+      "red_review": 2,
+      "claim_evidence_alignment": 3,
+      "review_verification": 1,
+      "blue_repair": 2,
+      "swarm_stop": 1,
+      "claim_ledger_built": 1
+    }
+  }
+}
