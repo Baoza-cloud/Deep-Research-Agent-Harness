@@ -67,6 +67,14 @@ flowchart TB
 
 可编辑源图位于 [`evaluation/deep_research_architecture.drawio`](evaluation/deep_research_architecture.drawio)。
 
+## 真实 Web 演示
+
+[`evaluation/demo/web_showcase_v1`](evaluation/demo/web_showcase_v1) 保存了一次 DeepSeek + Tavily 的完整真实
+Web 演示：8 节点 DAG、5 类动态角色、104→52 的检索过滤、逐句 Claim 验证、8 个确定性 Blue Patch、
+增量验证以及 `completed_with_evidence_gaps` 的诚实失败状态。目录同时提供 2–3 分钟
+讲稿、一页实验与失败案例、Trace 导航和面试问答；公开 Bundle 保留完整执行事件和来源元数据，但不再分发
+Tavily 返回的网页正文。
+
 ## 快速开始
 
 ### 1. 安装
@@ -280,7 +288,7 @@ python3 -m pip install --no-deps -e .
 # 验证模块入口
 python3 -m research_engine --help
 
-# 运行按子系统拆分的 112 项离线测试
+# 运行按子系统拆分的 113 项离线测试
 python3 -m pytest -q tests
 
 # 零 Key、零网络、零本地索引 smoke test

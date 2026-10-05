@@ -23,7 +23,12 @@ from .schemas import (
 
 
 CITATION_PATTERN = re.compile(r"\[([A-Za-z0-9_-]+-E\d+)\]")
-CLAIM_SPLIT = re.compile(r"(?<=[。！？!?\.])\s+(?!\[[A-Za-z0-9_-]+-E\d+\])|\n+")
+CLAIM_SPLIT = re.compile(
+    r"(?<=[。！？!?])(?!\s*\[[A-Za-z0-9_-]+-E\d+\])\s*"
+    r"|(?<=\.)(?!\s*\[[A-Za-z0-9_-]+-E\d+\])\s+"
+    r"|(?<=\])\s+(?!\[[A-Za-z0-9_-]+-E\d+\])"
+    r"|\n+"
+)
 TOKEN_PATTERN = re.compile(r"[A-Za-z0-9_]+|[\u4e00-\u9fff]")
 CODE_BLOCK = re.compile(r"```[\s\S]*?```")
 MARKDOWN_HEADING = re.compile(r"^\s*#{1,6}\s+(.+)$")
