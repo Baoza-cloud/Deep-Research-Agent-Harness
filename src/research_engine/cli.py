@@ -12,7 +12,8 @@ from .config import ResearchConfig
 from .env import load_env_files
 from .memory import SharedMemory
 from .llm_backends import auto_provider, build_llm
-from .orchestrator import DeepResearchAgent, default_memory_path
+from .orchestrator import DeepResearchAgent, default_memory_path, default_run_store_path
+from .persistence import RunStore
 from .planner import HeuristicPlanner, LLMPlanner
 from .web_backends import CompositeSearchBackend, TavilySearchBackend
 
@@ -78,6 +79,24 @@ def build_search_backend(args: argparse.Namespace):
 
 async def async_main(args: argparse.Namespace) -> int:
     project_root = Path(__file__).resolve().parents[2]
+    run_store = RunStore(args.run_store or default_run_store_path(project_root))
+    if args.replay:
+        try:
+            payload = run_store.replay(args.replay)
+        finally:
+            run_store.close()
+        output = json.dumps(payload, ensure_ascii=False, indent=2)
+        if args.output:
+            Path(args.output).write_text(output, encoding="utf-8")
+        print(output)
+        return 0
+
+    question = args.question
+    if args.resume and not question:
+        question = run_store.load(args.resume).objective
+    if not question:
+        run_store.close()
+        raise ValueError("A research question is required unless --resume or --replay is used")
     is_fixture_smoke = args.offline and args.search_provider == "fixture"
     if not is_fixture_smoke:
         load_env_files((project_root / ".env", project_root / "evaluation" / ".env"))
@@ -110,11 +129,17 @@ async def async_main(args: argparse.Namespace) -> int:
             max_worker_invocations=args.max_worker_invocations,
             max_stagnant_review_rounds=args.max_stagnant_review_rounds,
         ),
+        run_store=run_store,
     )
     try:
-        result = await agent.run(args.question)
+        result = await agent.run(
+            question,
+            run_id=args.resume or args.run_id,
+            resume=bool(args.resume),
+        )
     finally:
         memory.close()
+        run_store.close()
     output = json.dumps(result.to_dict(), ensure_ascii=False, indent=2)
     if args.output:
         Path(args.output).write_text(output, encoding="utf-8")
@@ -127,7 +152,7 @@ def main() -> int:
         prog="deep-research",
         description="Run the multi-agent deep research engine",
     )
-    parser.add_argument("question")
+    parser.add_argument("question", nargs="?")
     parser.add_argument("--offline", action="store_true", help="Do not call an LLM")
     parser.add_argument(
         "--provider",
@@ -169,6 +194,18 @@ def main() -> int:
     parser.add_argument("--web-weight", type=float, default=1.0)
     parser.add_argument("--output", help="Optional JSON result path")
     parser.add_argument("--memory", help="SQLite memory path")
+    parser.add_argument(
+        "--run-store",
+        help="SQLite durable-run store (default: data/research_runs.sqlite3)",
+    )
+    parser.add_argument("--run-id", help="Stable idempotency key for a new run")
+    recovery = parser.add_mutually_exclusive_group()
+    recovery.add_argument("--resume", metavar="RUN_ID", help="Continue a persisted run")
+    recovery.add_argument(
+        "--replay",
+        metavar="RUN_ID",
+        help="Replay persisted Trace without model or retrieval calls",
+    )
     parser.add_argument("--concurrency", type=int, default=4)
     parser.add_argument("--task-timeout", type=float, default=45.0)
     parser.add_argument("--global-timeout", type=float, default=240.0)
@@ -194,7 +231,11 @@ def main() -> int:
         help="Use deterministic lexical claim verification only",
     )
     args = parser.parse_args()
-    if args.search_provider == "fixture" and not args.offline:
+    if args.run_id and args.resume:
+        parser.error("--run-id cannot be combined with --resume")
+    if not args.question and not args.resume and not args.replay:
+        parser.error("question is required unless --resume or --replay is used")
+    if not args.replay and args.search_provider == "fixture" and not args.offline:
         parser.error("--search-provider fixture requires --offline")
     return asyncio.run(async_main(args))
 

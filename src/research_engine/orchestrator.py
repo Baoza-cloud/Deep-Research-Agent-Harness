@@ -28,6 +28,12 @@ from .harness import (
 )
 from .memory import SharedMemory
 from .planner import Planner
+from .persistence import (
+    PersistedTrace,
+    RunAlreadyExistsError,
+    RunCheckpoint,
+    RunStore,
+)
 from .schemas import (
     ClaimLedger,
     CompletionStatus,
@@ -268,6 +274,7 @@ class DeepResearchAgent:
         tool_registry: ToolRegistry | None = None,
         worker_spec: AgentSpec | None = None,
         swarm_policy: SwarmPolicy | None = None,
+        run_store: RunStore | None = None,
     ):
         self.planner = planner
         self.worker = worker
@@ -309,21 +316,87 @@ class DeepResearchAgent:
             tool_names=("retrieval",) if worker_backend is not None else (),
         )
         self.swarm_policy = swarm_policy or HeuristicSwarmPolicy()
+        self.run_store = run_store
 
-    async def run(self, question: str) -> ResearchResult:
+    async def run(
+        self,
+        question: str,
+        *,
+        run_id: str | None = None,
+        resume: bool = False,
+    ) -> ResearchResult:
+        """Execute, resume, or idempotently return one durable research run."""
+
         question = question.strip()
         if not question:
             raise ValueError("Research question cannot be empty")
+        if resume and run_id is None:
+            raise ValueError("resume=True requires run_id")
+
+        run_id = run_id or f"research-{uuid.uuid4().hex}"
+        checkpoint: RunCheckpoint | None = None
+        owner_id = uuid.uuid4().hex
+        if self.run_store is not None:
+            created = self.run_store.create_run(
+                run_id,
+                question,
+                metadata={"engine_version": os.getenv("RESEARCH_ENGINE_VERSION", "dev")},
+            )
+            if not created:
+                checkpoint = self.run_store.load(run_id)
+                if checkpoint.result is not None and checkpoint.lifecycle_status == "completed":
+                    return checkpoint.result
+                if checkpoint.result is not None and not resume:
+                    return checkpoint.result
+                if not resume:
+                    raise RunAlreadyExistsError(
+                        f"run_id {run_id!r} already exists; pass resume=True to continue"
+                    )
+            self.run_store.acquire(run_id, owner_id, resume=resume)
+        elif resume:
+            raise RuntimeError("A RunStore is required to resume a run")
+
+        try:
+            result = await self._execute_run(
+                question,
+                run_id=run_id,
+                resume_checkpoint=checkpoint if resume else None,
+            )
+        except BaseException as exc:
+            if self.run_store is not None:
+                self.run_store.mark_interrupted(run_id, exc)
+            raise
+        if self.run_store is not None:
+            self.run_store.finalize(run_id, result)
+        return result
+
+    async def resume(self, run_id: str) -> ResearchResult:
+        if self.run_store is None:
+            raise RuntimeError("A RunStore is required to resume a run")
+        checkpoint = self.run_store.load(run_id)
+        return await self.run(checkpoint.objective, run_id=run_id, resume=True)
+
+    def replay(self, run_id: str) -> dict[str, Any]:
+        if self.run_store is None:
+            raise RuntimeError("A RunStore is required to replay a run")
+        return self.run_store.replay(run_id)
+
+    async def _execute_run(
+        self,
+        question: str,
+        *,
+        run_id: str,
+        resume_checkpoint: RunCheckpoint | None,
+    ) -> ResearchResult:
 
         reset_review_history = getattr(self.reviewer, "reset_history", None)
         if callable(reset_review_history):
             reset_review_history()
 
-        started_at = utc_now()
-        run_id = f"research-{uuid.uuid4().hex}"
+        started_at = resume_checkpoint.started_at if resume_checkpoint else utc_now()
         llm_config = getattr(getattr(self.synthesizer, "llm", None), "config", None)
         provider = getattr(llm_config, "provider", None)
-        run_metadata: dict[str, Any] = {
+        current_run_metadata: dict[str, Any] = {
             "engine_version": os.getenv("RESEARCH_ENGINE_VERSION", "dev"),
             "research_config": asdict(self.config),
             "prompt_schema_versions": {
@@ -348,20 +421,54 @@ class DeepResearchAgent:
                 "registered_tools": list(self.tool_registry.names),
             },
         }
+        run_metadata = (
+            dict(resume_checkpoint.metadata)
+            if resume_checkpoint is not None and resume_checkpoint.metadata
+            else current_run_metadata
+        )
+        previous_events = (
+            self.run_store.events(run_id)
+            if self.run_store is not None and resume_checkpoint is not None
+            else []
+        )
+        trace = PersistedTrace(previous_events, store=self.run_store, run_id=run_id)
         context = RunContext(
             run_id=run_id,
             objective=question,
             tools=self.tool_registry,
-            metadata={"engine_version": run_metadata["engine_version"]},
+            metadata=run_metadata,
+            event_sink=(
+                (lambda event: self.run_store.append_event(run_id, event))
+                if self.run_store is not None
+                else None
+            ),
         )
-        plan = await self.planner.plan(question)
-        swarm = self.swarm_policy.decide(
-            question,
-            plan,
-            self.config,
-            self.worker_spec,
-        )
-        budget = BudgetController(swarm)
+        if resume_checkpoint is not None and resume_checkpoint.plan is not None:
+            plan = resume_checkpoint.plan
+            swarm = resume_checkpoint.swarm or self.swarm_policy.decide(
+                question,
+                plan,
+                self.config,
+                self.worker_spec,
+            )
+            budget = BudgetController.restore(swarm, resume_checkpoint.budget)
+            completed_review_rounds = sum(
+                1 for event in previous_events if event.get("event") == "red_review"
+            )
+            if budget.used[BudgetResource.REVIEW_ROUND.value] > completed_review_rounds:
+                budget.used[BudgetResource.REVIEW_ROUND.value] = completed_review_rounds
+                budget.exhausted.discard(BudgetResource.REVIEW_ROUND.value)
+        else:
+            if self.run_store is not None:
+                self.run_store.set_phase(run_id, "planning")
+            plan = await self.planner.plan(question)
+            swarm = self.swarm_policy.decide(
+                question,
+                plan,
+                self.config,
+                self.worker_spec,
+            )
+            budget = BudgetController(swarm)
         semaphore = asyncio.Semaphore(swarm.max_concurrency)
         swarm_metadata = {
             **swarm.to_dict(),
@@ -372,23 +479,96 @@ class DeepResearchAgent:
         context.put_artifact("research_plan", plan)
         context.put_artifact("swarm_plan", swarm)
         context.put_artifact("budget_controller", budget)
-        state = ResearchRunState(plan)
         evidences: list[Evidence] = []
         forced_synthesis = False
-        trace: list[dict[str, Any]] = [
-            {
-                "at": utc_now(),
-                "event": "plan_created",
-                "run_id": run_id,
-                "version": plan.version,
-                "tasks": [task.subtask_id for task in plan.subtasks],
-            },
-            {
-                "at": utc_now(),
-                "event": "swarm_configured",
-                **swarm_metadata,
-            },
-        ]
+        if resume_checkpoint is None:
+            trace.extend(
+                [
+                    {
+                        "at": utc_now(),
+                        "event": "plan_created",
+                        "run_id": run_id,
+                        "version": plan.version,
+                        "tasks": [task.subtask_id for task in plan.subtasks],
+                    },
+                    {
+                        "at": utc_now(),
+                        "event": "swarm_configured",
+                        **swarm_metadata,
+                    },
+                ]
+            )
+
+        def on_task_transition(runtime: TaskRuntime, history: dict[str, Any]) -> None:
+            event = {
+                "at": history["at"],
+                "event": "task_transition",
+                "task_id": runtime.spec.subtask_id,
+                **{key: value for key, value in history.items() if key != "at"},
+            }
+            if self.run_store is not None:
+                self.run_store.checkpoint_node(run_id, runtime, event=event)
+                trace.append_already_persisted(event)
+            else:
+                trace.append(event)
+
+        state = ResearchRunState(plan, on_transition=on_task_transition)
+        resume_execution_needed = False
+        if resume_checkpoint is not None:
+            for task_id, runtime in state.tasks.items():
+                saved = resume_checkpoint.nodes.get(task_id)
+                if saved is None:
+                    resume_execution_needed = True
+                    continue
+                runtime.status = saved.status
+                runtime.spec.status = saved.status
+                runtime.attempts = saved.attempts
+                runtime.error = saved.error
+                runtime.started_at = saved.started_at
+                runtime.finished_at = saved.finished_at
+                runtime.history = list(saved.history)
+                runtime.evidences = list(saved.evidences)
+                if saved.status is TaskStatus.SUCCEEDED:
+                    evidences.extend(saved.evidences)
+                else:
+                    resume_execution_needed = True
+                    runtime.recover("run_resumed")
+            trace.append(
+                {
+                    "at": utc_now(),
+                    "event": "run_resumed",
+                    "run_id": run_id,
+                    "from_phase": resume_checkpoint.phase,
+                    "reused_nodes": sorted(
+                        task_id
+                        for task_id, runtime in state.tasks.items()
+                        if runtime.status is TaskStatus.SUCCEEDED
+                    ),
+                    "retry_nodes": sorted(
+                        task_id
+                        for task_id, runtime in state.tasks.items()
+                        if runtime.status is not TaskStatus.SUCCEEDED
+                    ),
+                }
+            )
+
+        if self.run_store is not None:
+            self.run_store.save_plan(run_id, plan, swarm, run_metadata)
+
+            def checkpoint_budget(snapshot: dict[str, Any]) -> None:
+                self.run_store.save_budget(run_id, snapshot)
+                trace.append(
+                    {
+                        "at": utc_now(),
+                        "event": "budget_checkpointed",
+                        "budget": {
+                            key: value for key, value in snapshot.items() if key != "internal"
+                        },
+                    }
+                )
+
+            budget.bind_checkpoint(checkpoint_budget)
+            self.run_store.set_phase(run_id, "executing_dag")
 
         try:
             await asyncio.wait_for(
@@ -418,15 +598,34 @@ class DeepResearchAgent:
         if "deadline_exceeded" in budget.stop_reasons:
             forced_synthesis = True
 
-        draft = await self.synthesizer.synthesize(
-            question,
-            plan,
-            evidences,
-            self.memory,
-            forced=forced_synthesis,
+        can_reuse_report = bool(
+            resume_checkpoint is not None
+            and resume_checkpoint.current_report
+            and not resume_execution_needed
         )
-        draft = self.repairer.normalize_citations(draft, evidences)
-        draft, removed_markers = remove_omission_markers(draft)
+        if can_reuse_report:
+            draft = str(resume_checkpoint.current_report)
+            removed_markers = 0
+            trace.append(
+                {
+                    "at": utc_now(),
+                    "event": "intermediate_report_reused",
+                    "source_phase": resume_checkpoint.phase,
+                }
+            )
+        else:
+            if self.run_store is not None:
+                self.run_store.set_phase(run_id, "synthesizing")
+            draft = await self.synthesizer.synthesize(
+                question,
+                plan,
+                evidences,
+                self.memory,
+                forced=forced_synthesis,
+            )
+            draft = self.repairer.normalize_citations(draft, evidences)
+            draft, removed_markers = remove_omission_markers(draft)
+            self._checkpoint_report(run_id, "initial_synthesis", draft)
         if removed_markers:
             trace.append(
                 {
@@ -441,11 +640,26 @@ class DeepResearchAgent:
             self.config.min_score_improvement,
             self.config.oscillation_window,
         )
-        final_review = None
+        final_review = (
+            resume_checkpoint.result.review
+            if can_reuse_report and resume_checkpoint and resume_checkpoint.result
+            else None
+        )
         verification_agent_override: AgentSpec | None = None
-        previous_ledger: ClaimLedger | None = None
+        previous_ledger: ClaimLedger | None = (
+            resume_checkpoint.result.claim_ledger
+            if can_reuse_report and resume_checkpoint and resume_checkpoint.result
+            else None
+        )
         fixed_fallback_requested = False
-        for review_round in range(1, swarm.max_review_rounds + 1):
+        if self.run_store is not None:
+            self.run_store.set_phase(run_id, "reviewing")
+        starting_review_round = (
+            sum(1 for event in previous_events if event.get("event") == "red_review") + 1
+            if resume_checkpoint is not None
+            else 1
+        )
+        for review_round in range(starting_review_round, swarm.max_review_rounds + 1):
             if not budget.try_consume(BudgetResource.REVIEW_ROUND):
                 reason = (
                     "deadline_exceeded" if budget.deadline_exceeded() else "review_budget_exhausted"
@@ -619,6 +833,12 @@ class DeepResearchAgent:
             )
             if claim_patch_result.changed:
                 draft = self.repairer.normalize_citations(claim_patch_result.report, evidences)
+                self._checkpoint_report(
+                    run_id,
+                    "deterministic_claim_patch",
+                    draft,
+                    round=review_round,
+                )
                 trace.append(
                     {
                         "at": utc_now(),
@@ -669,6 +889,12 @@ class DeepResearchAgent:
             if patch_result.changed:
                 draft = self.repairer.normalize_citations(patch_result.report, evidences)
                 draft, removed_markers = remove_omission_markers(draft)
+                self._checkpoint_report(
+                    run_id,
+                    "structured_blue_patch",
+                    draft,
+                    round=review_round,
+                )
                 if removed_markers:
                     trace.append(
                         {
@@ -728,6 +954,12 @@ class DeepResearchAgent:
             )
             draft = self.repairer.normalize_citations(draft, evidences)
             draft, removed_markers = remove_omission_markers(draft)
+            self._checkpoint_report(
+                run_id,
+                "rewrite_fallback",
+                draft,
+                round=review_round,
+            )
             if removed_markers:
                 trace.append(
                     {
@@ -780,6 +1012,7 @@ class DeepResearchAgent:
                 min_citation_coverage=self.config.min_citation_coverage,
                 max_pass_issue_severity=self.config.max_pass_issue_severity,
             )
+            self._checkpoint_report(run_id, "final_claim_patch", draft)
             trace.append(
                 {
                     "at": utc_now(),
@@ -887,6 +1120,13 @@ class DeepResearchAgent:
             )
             fallback_selected = selected_candidate is fixed_candidate
             draft = selected_candidate.report
+            self._checkpoint_report(
+                run_id,
+                "final_quality_guard",
+                draft,
+                selected=selected_candidate.origin,
+                reason=fallback_selection_reason,
+            )
             claim_ledger = selected_candidate.ledger
             final_review = selected_candidate.review
             claim_support_rate = selected_candidate.claim_support_rate
@@ -1108,18 +1348,10 @@ class DeepResearchAgent:
             "swarm_max_concurrency": swarm.max_concurrency,
             "budget": budget.snapshot(),
         }
-        trace.extend(
-            {
-                "at": history["at"],
-                "event": "task_transition",
-                "task_id": runtime.spec.subtask_id,
-                **{key: value for key, value in history.items() if key != "at"},
-            }
-            for runtime in state.tasks.values()
-            for history in runtime.history
-        )
         trace.extend(context.events)
         trace.sort(key=lambda item: item["at"])
+        if self.run_store is not None:
+            self.run_store.set_phase(run_id, "finalizing")
         return ResearchResult(
             question=question,
             answer=draft,
@@ -1132,7 +1364,7 @@ class DeepResearchAgent:
             claim_ledger=claim_ledger,
             status=status,
             metrics=metrics,
-            trace=trace,
+            trace=list(trace),
             started_at=started_at,
             finished_at=utc_now(),
         )
@@ -1148,7 +1380,7 @@ class DeepResearchAgent:
         budget: BudgetController,
         semaphore: asyncio.Semaphore,
     ) -> None:
-        replans = 0
+        replans = int(budget.used.get(BudgetResource.REPLAN.value, 0))
         while not state.complete:
             if budget.deadline_exceeded():
                 self._cancel_unfinished(state, "deadline_exceeded")
@@ -1236,6 +1468,13 @@ class DeepResearchAgent:
                     plan.version += 1
                     plan.subtasks.extend(replacements)
                     state.add_subtasks(replacements)
+                    if self.run_store is not None:
+                        self.run_store.save_plan(
+                            context.run_id,
+                            plan,
+                            swarm,
+                            context.metadata,
+                        )
                     trace.append(
                         {
                             "at": utc_now(),
@@ -1278,6 +1517,7 @@ class DeepResearchAgent:
                 if not evidences:
                     runtime.transition(TaskStatus.FAILED, "no_evidence")
                     return TaskExecution(runtime, [], False, "no_evidence")
+                runtime.evidences = list(evidences)
                 runtime.transition(TaskStatus.SUCCEEDED)
                 return TaskExecution(runtime, evidences, True)
             except asyncio.TimeoutError:
@@ -1390,6 +1630,20 @@ class DeepResearchAgent:
             if runtime.status in {TaskStatus.PENDING, TaskStatus.READY}:
                 runtime.transition(TaskStatus.CANCELLED, reason)
 
+    def _checkpoint_report(
+        self,
+        run_id: str,
+        stage: str,
+        report: str,
+        **metadata: Any,
+    ) -> None:
+        if self.run_store is not None:
+            self.run_store.save_report(run_id, stage, report, metadata=metadata)
+
 
 def default_memory_path(project_root: str | Path) -> Path:
     return Path(project_root) / "data" / "research_memory.sqlite3"
+
+
+def default_run_store_path(project_root: str | Path) -> Path:
+    return Path(project_root) / "data" / "research_runs.sqlite3"

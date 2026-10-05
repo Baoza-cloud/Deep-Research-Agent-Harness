@@ -32,7 +32,17 @@ from .llm_backends import (
     backend_config,
     build_llm,
 )
-from .orchestrator import DeepResearchAgent
+from .orchestrator import DeepResearchAgent, default_run_store_path
+from .persistence import (
+    NodeCheckpoint,
+    RunAlreadyExistsError,
+    RunCheckpoint,
+    RunInProgressError,
+    RunNotFoundError,
+    RunObjectiveMismatchError,
+    RunStore,
+    RunStoreError,
+)
 from .planner import HeuristicPlanner, LLMPlanner, Planner
 from .schemas import (
     ClaimEvidenceLink,
@@ -80,6 +90,7 @@ __all__ = [
     "CompositeSearchBackend",
     "ComplexityLevel",
     "DeepResearchAgent",
+    "default_run_store_path",
     "Evidence",
     "PatchApplicationResult",
     "PatchPosition",
@@ -114,6 +125,14 @@ __all__ = [
     "SecurityScanResult",
     "SharedMemory",
     "RunContext",
+    "RunAlreadyExistsError",
+    "RunCheckpoint",
+    "RunInProgressError",
+    "RunNotFoundError",
+    "RunObjectiveMismatchError",
+    "RunStore",
+    "RunStoreError",
+    "NodeCheckpoint",
     "SupportVerdict",
     "SwarmPlan",
     "SwarmPolicy",

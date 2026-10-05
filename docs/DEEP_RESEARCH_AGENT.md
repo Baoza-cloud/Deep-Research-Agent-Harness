@@ -208,7 +208,27 @@ Dynamic 结果低于门槛或明显弱于 Fixed 时，系统生成 Fixed Harness
 2. 批量失败：Planner 生成无冲突 replan，计划版本递增。
 3. 全局超时：取消未完成节点并强制合成，结果标记为 `partial_timeout`。
 
-评测支持 `--resume-from`：按 `pair_key` 复用成功行，只补跑失败项，并校验数据集 SHA256、Provider、Model、重复次数、Policy 版本、复杂度档位和预算兼容性。
+### 10.1 运行时持久化
+
+`RunStore` 使用独立 SQLite 数据库保存五类状态：
+
+| 数据 | 持久化内容 |
+|---|---|
+| Run | `run_id`、目标、阶段、生命周期、元数据、错误和最终结果 |
+| DAG Node | 节点规格、九状态、尝试次数、错误、状态历史、证据输出和 SHA256 |
+| Budget | 限额、累计消费、停止原因、质量序列、停滞计数和内部证据指纹 |
+| Report | 初稿、Structured Patch、回退重写和最终质量护栏候选 |
+| Trace | 按序事件、事件哈希、任务转换、预算检查点和恢复动作 |
+
+成功节点的状态与证据输出在同一 SQLite 事务中提交。恢复时，`succeeded` 节点保持不可变并直接加载证据；`running`、`failed`、`timed_out`、`cancelled`、`degraded` 和 `skipped` 节点重置为 `pending`，由 DAG 依赖重新调度。全局超时恢复会开启新的墙钟 deadline 窗口，但保留累计 Worker、验证、replan 和 review 消费。
+
+`run_id` 同时是幂等键：已完成任务的重复提交返回原 `ResearchResult`；未完成任务的普通重复提交被拒绝，必须显式调用 `resume`，从而避免两个请求重复调用模型和搜索。
+
+`RunStore.replay(run_id)` 只读取持久化事件、节点输出、预算和报告，并验证事件及节点输出 SHA256。Replay 不初始化模型、不调用检索、不写共享记忆；相同数据库快照会产生相同 Replay 结果。
+
+### 10.2 评测恢复
+
+评测仍支持 `--resume-from`：按 `pair_key` 复用成功行，只补跑失败项，并校验数据集 SHA256、Provider、Model、重复次数、Policy 版本、复杂度档位和预算兼容性。运行时 `run_id` 恢复与批量评测恢复互相独立。
 
 ## 11. 安全边界
 
@@ -288,6 +308,22 @@ python3 -m research_engine "研究问题" \
   --local-weight 1.2 \
   --web-weight 1.0
 ```
+
+指定幂等 `run_id`、恢复和确定性 Replay：
+
+```bash
+python3 -m research_engine "研究问题" \
+  --provider deepseek \
+  --search-provider tavily \
+  --run-id production-run-001
+
+python3 -m research_engine --resume production-run-001
+
+python3 -m research_engine --replay production-run-001 \
+  --output evaluation/production-run-001-replay.json
+```
+
+默认运行库为 `data/research_runs.sqlite3`；通过 `--run-store` 可覆盖。Replay 命令不要求问题、API Key 或搜索后端。
 
 `research_engine` 子模块使用包内相对导入。入口应为 `python3 -m research_engine` 或安装后的 `deep-research`，不要逐文件执行 `src/research_engine/*.py`。
 

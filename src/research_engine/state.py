@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, Iterable, List, Optional
+from typing import Callable, Dict, Iterable, List, Optional
 
 from .schemas import ResearchPlan, ResearchSubtask, TERMINAL_STATUSES, TaskStatus, utc_now
 
@@ -39,6 +39,12 @@ class TaskRuntime:
     started_at: Optional[str] = None
     finished_at: Optional[str] = None
     history: List[dict] = field(default_factory=list)
+    evidences: list = field(default_factory=list)
+    on_transition: Optional[Callable[["TaskRuntime", dict], None]] = field(
+        default=None,
+        repr=False,
+        compare=False,
+    )
 
     def transition(self, target: TaskStatus, reason: Optional[str] = None) -> None:
         target = TaskStatus(target)
@@ -60,17 +66,45 @@ class TaskRuntime:
             self.finished_at = now
         if reason:
             self.error = reason
-        self.history.append(
-            {"at": now, "from": previous.value, "to": target.value, "reason": reason}
-        )
+        event = {"at": now, "from": previous.value, "to": target.value, "reason": reason}
+        self.history.append(event)
+        if self.on_transition is not None:
+            self.on_transition(self, event)
+
+    def recover(self, reason: str = "run_resumed") -> bool:
+        """Reset an unfinished/failed node while keeping successful work immutable."""
+
+        if self.status is TaskStatus.SUCCEEDED:
+            return False
+        previous = self.status
+        self.status = TaskStatus.PENDING
+        self.spec.status = TaskStatus.PENDING
+        self.error = None
+        self.finished_at = None
+        now = utc_now()
+        event = {
+            "at": now,
+            "from": previous.value,
+            "to": TaskStatus.PENDING.value,
+            "reason": reason,
+        }
+        self.history.append(event)
+        if self.on_transition is not None:
+            self.on_transition(self, event)
+        return True
 
 
 class ResearchRunState:
     """Holds task runtimes and derives which DAG nodes are runnable."""
 
-    def __init__(self, plan: ResearchPlan):
+    def __init__(
+        self,
+        plan: ResearchPlan,
+        on_transition: Optional[Callable[[TaskRuntime, dict], None]] = None,
+    ):
         self.tasks: Dict[str, TaskRuntime] = {}
         self.trace: List[dict] = []
+        self.on_transition = on_transition
         self.add_subtasks(plan.subtasks)
 
     def add_subtasks(self, subtasks: Iterable[ResearchSubtask]) -> None:
@@ -89,7 +123,11 @@ class ResearchRunState:
                 raise ValueError(
                     f"Subtask {task.subtask_id} has unknown dependencies: {sorted(missing)}"
                 )
-            self.tasks[task.subtask_id] = TaskRuntime(task, TaskStatus(task.status))
+            self.tasks[task.subtask_id] = TaskRuntime(
+                task,
+                TaskStatus(task.status),
+                on_transition=self.on_transition,
+            )
 
         self._assert_acyclic()
 
