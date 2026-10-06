@@ -122,14 +122,36 @@ class ResearchWorker:
         "spm",
     }
 
+    @classmethod
+    def _technical_query_hints(cls, question: str) -> tuple[str, ...]:
+        """Add canonical English terms for mixed-language technical retrieval."""
+
+        folded = unicodedata.normalize("NFKC", question).casefold()
+        cross_namespace = "跨命名空间" in question or "cross namespace" in folded
+        if not cross_namespace:
+            return ()
+        hints: list[str] = []
+        if "ingress" in folded:
+            hints.append("Ingress cross namespace backend Service TLS Secret same namespace")
+        if "gateway" in folded or "referencegrant" in folded:
+            hints.append("Gateway API ReferenceGrant cross namespace HTTPRoute backendRef")
+        return tuple(hints)
+
+    @classmethod
+    def _expanded_query(cls, question: str, role_hint: str = "") -> str:
+        return " ".join(
+            item for item in (question, role_hint, *cls._technical_query_hints(question)) if item
+        ).strip()
+
     def __init__(self, backend: SearchBackend):
         self.backend = backend
 
     async def run(self, task: ResearchSubtask) -> list[Evidence]:
         oversample = min(20, max(task.max_results, task.max_results * 2))
-        rows = await self.backend.search(task.question, limit=oversample)
+        query = self._expanded_query(task.question)
+        rows = await self.backend.search(query, limit=oversample)
         selected, _ = self._filter_and_rank(rows, task.question, "researcher", task.max_results)
-        return self._normalize(task, selected, task.question, "researcher")
+        return self._normalize(task, selected, query, "researcher")
 
     async def run_for_agent(
         self,
@@ -140,7 +162,8 @@ class ResearchWorker:
         """Apply role-specific query expansion and deterministic result ranking."""
 
         hint = self.ROLE_QUERY_HINTS.get(spec.role, "")
-        query = f"{task.question} {hint}".strip()
+        technical_hints = self._technical_query_hints(task.question)
+        query = self._expanded_query(task.question, hint)
         oversample = min(20, max(task.max_results, task.max_results * 2))
         context.emit(
             "role_strategy_applied",
@@ -148,6 +171,7 @@ class ResearchWorker:
             agent_id=spec.agent_id,
             role=spec.role,
             query=query,
+            technical_query_hints=list(technical_hints),
             strategy="relevance_filter_rank_dedupe",
             relevance_threshold=self.ROLE_RELEVANCE_THRESHOLDS.get(spec.role, 0.14),
         )
