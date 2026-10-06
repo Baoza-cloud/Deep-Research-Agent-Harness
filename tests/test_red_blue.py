@@ -787,7 +787,7 @@ class RedBlueTests(unittest.IsolatedAsyncioTestCase):
         for issue in unsafe_issues:
             self.assertIn(issue.target or "", result.report)
 
-    async def test_blue_collapses_duplicate_url_citations(self):
+    async def test_blue_collapses_duplicate_url_citations_with_same_content(self):
         from research_engine.schemas import Evidence
 
         evidences = [
@@ -801,13 +801,79 @@ class RedBlueTests(unittest.IsolatedAsyncioTestCase):
             Evidence(
                 "b-E1",
                 "b",
-                "second",
+                "first",
                 "https://example.com/doc#section",
                 url="https://example.com/doc#section",
             ),
         ]
         normalized = BlueTeamRepairer.normalize_citations("同一事实 [a-E1][b-E1]", evidences)
         self.assertEqual(normalized, "同一事实 [a-E1]")
+
+    def test_blue_preserves_distinct_evidence_fragments_from_same_url(self):
+        evidences = [
+            Evidence(
+                "summary-E1",
+                "summary",
+                "页面标题与发布信息。",
+                "https://example.com/doc",
+                url="https://example.com/doc",
+            ),
+            Evidence(
+                "security-E1",
+                "security",
+                "Ingress 资源只支持一个 TLS 端口 443。",
+                "https://example.com/doc#tls",
+                url="https://example.com/doc#tls",
+            ),
+        ]
+
+        normalized = BlueTeamRepairer.normalize_citations(
+            "Ingress 资源只支持一个 TLS 端口 443。 [security-E1]",
+            evidences,
+        )
+
+        self.assertIn("[security-E1]", normalized)
+        self.assertNotIn("[summary-E1]", normalized)
+
+    def test_claim_repair_replaces_wrong_same_url_fragment_citation(self):
+        evidences = [
+            Evidence(
+                "summary-E1",
+                "summary",
+                "页面标题与发布信息。",
+                "https://example.com/doc",
+                url="https://example.com/doc",
+            ),
+            Evidence(
+                "security-E1",
+                "security",
+                "Ingress 资源只支持一个 TLS 端口 443。",
+                "https://example.com/doc#tls",
+                url="https://example.com/doc#tls",
+            ),
+        ]
+        source_text = "Ingress 资源只支持一个 TLS 端口 443。 [summary-E1]"
+        claim = ClaimRecord(
+            "C1",
+            "Ingress 资源只支持一个 TLS 端口 443。",
+            source_text=source_text,
+            citations=["summary-E1"],
+            verdict=SupportVerdict.INSUFFICIENT,
+            links=[
+                ClaimEvidenceLink("summary-E1", SupportVerdict.INSUFFICIENT, 0.9, cited=True),
+                ClaimEvidenceLink("security-E1", SupportVerdict.SUPPORTED, 0.98, cited=False),
+            ],
+        )
+        ledger = ClaimLedger(
+            claims=[claim],
+            verification_mode="semantic",
+        )
+
+        result = BlueTeamRepairer().repair_claim_gaps(source_text, evidences, ledger)
+        normalized = BlueTeamRepairer.normalize_citations(result.report, evidences)
+
+        self.assertIn("[security-E1]", normalized)
+        self.assertNotIn("[summary-E1]", normalized)
 
     def test_blue_removes_decorative_citations_from_validation_guidance(self):
         report = (

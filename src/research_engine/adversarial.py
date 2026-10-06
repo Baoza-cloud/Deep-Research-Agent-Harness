@@ -1290,16 +1290,19 @@ Red issues：{json.dumps(issue_payload, ensure_ascii=False)}
     def normalize_citations(report: str, evidences: Sequence[Evidence]) -> str:
         """Canonicalize wording and remove duplicate or decorative citations."""
 
-        canonical_id: dict[str, str] = {}
+        canonical_id: dict[tuple[str, str], str] = {}
         aliases: dict[str, str] = {}
         for evidence in evidences:
             if not evidence.url:
                 continue
             source = evidence.url
             canonical, _ = urldefrag(source)
-            key = canonical.rstrip("/").lower()
-            if not key:
+            canonical_url = canonical.rstrip("/").lower()
+            if not canonical_url:
                 continue
+            normalized_content = re.sub(r"\s+", " ", evidence.content).strip().casefold()
+            content_hash = hashlib.sha256(normalized_content.encode("utf-8")).hexdigest()
+            key = (canonical_url, content_hash)
             if key in canonical_id:
                 aliases[evidence.evidence_id] = canonical_id[key]
             else:

@@ -183,6 +183,7 @@ _PAREN_LIST = re.compile(
     r"(?P<label>[^，。；：:（）()\n]{4,48})[（(](?P<items>[^（）()\n]{3,160})[）)]"
 )
 _COUNT_TERMS = ("类别", "类型", "资源", "特性", "步骤", "阶段", "角色", "渠道", "原则")
+_MARKDOWN_HEADING = re.compile(r"^#{1,6}\s+(?P<title>.+?)\s*$")
 
 
 def normalize_patch_boundaries(text: str) -> str:
@@ -216,15 +217,21 @@ def report_integrity_issues(report: str) -> set[str]:
     if _CITATION_JOIN.search(report):
         issues.add("citation_boundary_join")
 
-    clauses: list[str] = []
-    for raw in re.split(r"[。！？!?；;\n]+", report):
-        semantic = _CITATION_TOKEN.sub("", raw)
-        semantic = re.sub(r"^[#>*\-+\d.)、\s]+", "", semantic)
-        semantic = re.sub(r"\s+", "", semantic).strip("，,:：。；;*_")
-        if len(semantic) < 12 or "证据缺口" in semantic or "基于当前证据" in semantic:
+    clauses: list[tuple[str, str]] = []
+    section = ""
+    for line in report.splitlines():
+        heading = _MARKDOWN_HEADING.match(line.strip())
+        if heading:
+            section = re.sub(r"\s+", "", heading.group("title")).casefold()
             continue
-        clauses.append(semantic.casefold())
-    for clause, count in Counter(clauses).items():
+        for raw in re.split(r"[。！？!?；;]+", line):
+            semantic = _CITATION_TOKEN.sub("", raw)
+            semantic = re.sub(r"^[#>*\-+\d.)、\s]+", "", semantic)
+            semantic = re.sub(r"\s+", "", semantic).strip("，,:：。；;*_")
+            if len(semantic) < 12 or "证据缺口" in semantic or "基于当前证据" in semantic:
+                continue
+            clauses.append((section, semantic.casefold()))
+    for (_, clause), count in Counter(clauses).items():
         if count > 1:
             issues.add(f"duplicate_claim:{clause[:24]}")
 

@@ -121,6 +121,18 @@ class PatchIntegrityGateTests(unittest.TestCase):
         self.assertTrue(result.changed)
         self.assertIn("[facts-E1] 下一条说明", result.report)
 
+    def test_summary_and_conclusion_may_restate_the_same_supported_claim(self):
+        from research_engine.text_quality import report_integrity_issues
+
+        report = (
+            "## 执行摘要\nGateway API 是基于 CRD 的 API，需要安装 CRD。 [facts-E1]\n\n"
+            "## 结论\nGateway API 是基于 CRD 的 API，需要安装 CRD。 [facts-E1]"
+        )
+
+        self.assertFalse(
+            any(issue.startswith("duplicate_claim:") for issue in report_integrity_issues(report))
+        )
+
 
 class ReleaseTelemetryTests(unittest.IsolatedAsyncioTestCase):
     async def test_unconfigured_pricing_is_unknown_instead_of_zero(self):
