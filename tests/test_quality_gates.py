@@ -133,6 +133,21 @@ class PatchIntegrityGateTests(unittest.TestCase):
             any(issue.startswith("duplicate_claim:") for issue in report_integrity_issues(report))
         )
 
+    def test_integrity_gate_detects_truncated_gap_markup(self):
+        from research_engine.text_quality import report_integrity_issues
+
+        malformed = (
+            "## 跨命名空间安全\n"
+            "基于当前证据，以下内容无法确认：“Gateway API 使用 ReferenceGrant "
+            "[gateway-cross-names。**"
+        )
+
+        issues = report_integrity_issues(malformed)
+
+        self.assertIn("dangling_citation_token", issues)
+        self.assertIn("unbalanced_chinese_quotes", issues)
+        self.assertIn("unbalanced_markdown_bold", issues)
+
 
 class ReleaseTelemetryTests(unittest.IsolatedAsyncioTestCase):
     async def test_unconfigured_pricing_is_unknown_instead_of_zero(self):

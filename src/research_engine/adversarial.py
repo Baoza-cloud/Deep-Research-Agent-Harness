@@ -139,9 +139,15 @@ def _compact_evidence_gap_lines(report: str) -> tuple[str, int]:
                 if topic.startswith(marker):
                     topic = topic[len(marker) :]
                     break
-            topic = topic.strip(' ：:；;。‘’“”"*')
+            quoted = re.search(r"[“\"](?P<claim>[^”\"]+)[”\"]", topic)
+            if quoted:
+                topic = quoted.group("claim")
+            topic = CITATION_PATTERN.sub("", topic)
+            topic = re.sub(r"\[[A-Za-z0-9_-]+(?=[\s。，；、”’]|$).*$", "", topic)
+            topic = re.sub(r"\*{1,2}", "", topic)
+            topic = re.sub(r"\s+", " ", topic).strip(' ：:；;。‘’“”"*')
             if topic and topic not in topics:
-                topics.append(topic[:180])
+                topics.append(topic)
         preview = "；".join(topics[:3]) or "本节相关结论"
         if len(topics) > 3:
             preview += f"；另有 {len(topics) - 3} 项"

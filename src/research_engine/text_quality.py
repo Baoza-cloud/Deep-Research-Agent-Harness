@@ -184,6 +184,7 @@ _PAREN_LIST = re.compile(
 )
 _COUNT_TERMS = ("类别", "类型", "资源", "特性", "步骤", "阶段", "角色", "渠道", "原则")
 _MARKDOWN_HEADING = re.compile(r"^#{1,6}\s+(?P<title>.+?)\s*$")
+_DANGLING_CITATION = re.compile(r"\[[A-Za-z0-9_]+-[A-Za-z0-9_-]{2,}(?=[\s。，；、”’]|$)")
 
 
 def normalize_patch_boundaries(text: str) -> str:
@@ -216,6 +217,12 @@ def report_integrity_issues(report: str) -> set[str]:
     issues: set[str] = set()
     if _CITATION_JOIN.search(report):
         issues.add("citation_boundary_join")
+    if _DANGLING_CITATION.search(report):
+        issues.add("dangling_citation_token")
+    if report.count("“") != report.count("”"):
+        issues.add("unbalanced_chinese_quotes")
+    if report.count("**") % 2:
+        issues.add("unbalanced_markdown_bold")
 
     clauses: list[tuple[str, str]] = []
     section = ""

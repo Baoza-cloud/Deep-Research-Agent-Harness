@@ -457,7 +457,7 @@ class VerifierTests(unittest.IsolatedAsyncioTestCase):
             claims=[
                 ClaimRecord(
                     f"C{index}",
-                    line,
+                    line.split(" [", 1)[0],
                     section="发现",
                     source_text=line,
                     verdict=SupportVerdict.UNCITED,
@@ -471,6 +471,36 @@ class VerifierTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.report.count("已合并为待验证问题"), 1)
         self.assertIn("本节有 3 项内容无法确认", result.report)
         self.assertTrue(any(patch.patch_id == "AUTO-gap-compaction" for patch in result.applied))
+
+    def test_blue_gap_compaction_preserves_complete_quoted_topics(self):
+        lines = [
+            "第一条需要核验的完整事实陈述。 [facts-E1]",
+            "第二条需要核验的完整事实陈述。 [facts-E2]",
+        ]
+        report = "# 报告\n\n## 发现\n" + "\n".join(lines)
+        ledger = ClaimLedger(
+            claims=[
+                ClaimRecord(
+                    f"C{index}",
+                    line.split(" [", 1)[0],
+                    section="发现",
+                    source_text=line,
+                    verdict=SupportVerdict.UNCITED,
+                )
+                for index, line in enumerate(lines, start=1)
+            ]
+        )
+
+        evidences = [
+            Evidence("facts-E1", "facts", "第一条证据。", "source"),
+            Evidence("facts-E2", "facts", "第二条证据。", "source"),
+        ]
+        result = BlueTeamRepairer(llm=None).repair_claim_gaps(report, evidences, ledger)
+
+        self.assertIn("第一条需要核验的完整事实陈述", result.report)
+        self.assertIn("第二条需要核验的完整事实陈述", result.report)
+        self.assertNotIn("[facts-", result.report)
+        self.assertEqual(result.report.count("“"), result.report.count("”"))
 
     async def test_blue_deletes_exact_material_inference_overreach(self):
         target = "字段存在，因此该接口保证支持全部筛选任务。 [facts-E1]"

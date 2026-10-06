@@ -20,10 +20,12 @@ All notable changes to this project are documented in this file. The project fol
 - A deterministic Claim repair no longer skips a pending structured comparison-coverage repair.
 - Unconfigured model pricing is reported as `cost_usd=null` with `cost_status=unknown`, rather
   than as a misleading zero-dollar run.
+- Citation canonicalization now preserves distinct evidence fragments from the same URL, and
+  evidence-gap compaction keeps complete quoted topics without truncating citation tokens.
 
 ### Verified
 
-- 134 offline tests and 84% branch coverage.
+- 136 offline tests and 84% branch coverage.
 - Regression coverage for asymmetric comparisons, duplicate/format/enumeration Patch rollback,
   unknown-cost telemetry, and release identity metadata.
 
