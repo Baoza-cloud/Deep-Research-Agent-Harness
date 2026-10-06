@@ -112,7 +112,7 @@ EMPTY_USAGE = {
     "prompt_tokens": 0,
     "completion_tokens": 0,
     "total_tokens": 0,
-    "cost_usd": 0.0,
+    "cost_usd": None,
     "retry_count": 0,
     "call_count": 0,
 }
@@ -132,9 +132,19 @@ def usage_snapshot(provider: Any) -> dict[str, Any]:
 def usage_delta(before: Mapping[str, Any], after: Mapping[str, Any]) -> dict[str, Any]:
     result: dict[str, Any] = {}
     for key in EMPTY_USAGE:
-        value = float(after.get(key, 0)) - float(before.get(key, 0))
-        result[key] = round(value, 9) if key == "cost_usd" else int(value)
+        if key == "cost_usd":
+            before_cost = before.get(key)
+            after_cost = after.get(key)
+            result[key] = (
+                round(float(after_cost) - float(before_cost), 9)
+                if before_cost is not None and after_cost is not None
+                else None
+            )
+            continue
+        value = float(after.get(key, 0) or 0) - float(before.get(key, 0) or 0)
+        result[key] = int(value)
     result["measurement"] = after.get("measurement", before.get("measurement", "unavailable"))
+    result["cost_status"] = after.get("cost_status", before.get("cost_status", "unknown"))
     return result
 
 

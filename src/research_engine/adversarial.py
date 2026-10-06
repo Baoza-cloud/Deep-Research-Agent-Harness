@@ -30,7 +30,11 @@ from .schemas import (
     ReviewResult,
     SupportVerdict,
 )
-from .text_quality import normalize_evidence_bound_language
+from .text_quality import (
+    normalize_evidence_bound_language,
+    normalize_patch_boundaries,
+    report_integrity_issues,
+)
 
 
 CITATION_PATTERN = re.compile(r"\[([A-Za-z0-9_-]+-E\d+)\]")
@@ -1159,6 +1163,7 @@ Red issues：{json.dumps(issue_payload, ensure_ascii=False)}
         """Apply exact-match patches sequentially; never use fuzzy model edits."""
 
         current = report
+        integrity_baseline = report_integrity_issues(current)
         valid_ids = {item.evidence_id for item in evidences}
         applied: list[ReportPatch] = []
         rejected: list[PatchRejection] = []
@@ -1234,6 +1239,7 @@ Red issues：{json.dumps(issue_payload, ensure_ascii=False)}
                     candidate = current.replace(patch.target, insertion, 1)
 
             candidate = re.sub(r"\n{3,}", "\n\n", candidate).strip()
+            candidate = normalize_patch_boundaries(candidate)
             if not candidate:
                 rejected.append(PatchRejection(patch.patch_id, "report_cannot_be_empty"))
                 continue
@@ -1243,11 +1249,22 @@ Red issues：{json.dumps(issue_payload, ensure_ascii=False)}
             if len(candidate) - len(report) > self.max_growth_chars:
                 rejected.append(PatchRejection(patch.patch_id, "report_growth_limit_exceeded"))
                 continue
+            integrity_after = report_integrity_issues(candidate)
+            introduced_issues = sorted(integrity_after - integrity_baseline)
+            if introduced_issues:
+                rejected.append(
+                    PatchRejection(
+                        patch.patch_id,
+                        "post_patch_integrity:" + "|".join(introduced_issues),
+                    )
+                )
+                continue
             current = candidate
+            integrity_baseline = integrity_after
             applied.append(patch)
 
         return PatchApplicationResult(
-            report=_remove_orphan_markdown_lines(current),
+            report=_remove_orphan_markdown_lines(normalize_patch_boundaries(current)),
             requested_count=len(patches),
             applied=applied,
             rejected=rejected,
@@ -1328,7 +1345,7 @@ Red issues：{json.dumps(issue_payload, ensure_ascii=False)}
                     replacement_text.rstrip(),
                     1,
                 )
-        return normalized
+        return normalize_patch_boundaries(normalized)
 
 
 class ReviewConvergence:

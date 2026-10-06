@@ -24,6 +24,20 @@ def _timestamp(value: Any) -> float | None:
         return None
 
 
+def _cost(value: Any) -> float | None:
+    if value is None or value == "":
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _format_cost(value: Any) -> str:
+    resolved = _cost(value)
+    return f"{resolved:.6f}" if resolved is not None else "unknown"
+
+
 def _events(payload: Mapping[str, Any]) -> list[dict[str, Any]]:
     result = _result_payload(payload)
     rows = payload.get("trace") or result.get("trace") or []
@@ -79,7 +93,10 @@ def build_view_model(payload: Mapping[str, Any]) -> dict[str, Any]:
                     "output_summary": event.get("output_summary"),
                     "token_usage": event.get("token_usage")
                     or (event.get("usage") if isinstance(event.get("usage"), Mapping) else {}),
-                    "cost_usd": float(event.get("cost_usd", 0.0) or 0.0),
+                    "cost_usd": _cost(event.get("cost_usd")),
+                    "cost_status": (event.get("usage") or {}).get("cost_status")
+                    if isinstance(event.get("usage"), Mapping)
+                    else None,
                     "retry_count": int(event.get("retry_count", 0) or 0),
                     "error_type": event.get("error_type"),
                 }
@@ -158,7 +175,12 @@ def build_view_model(payload: Mapping[str, Any]) -> dict[str, Any]:
     ]
     metrics = result.get("metrics") or {}
     total_tokens = sum(int((span.get("token_usage") or {}).get("total", 0) or 0) for span in spans)
-    total_cost = sum(float(span.get("cost_usd", 0.0)) for span in spans)
+    span_costs = [float(span["cost_usd"]) for span in spans if span.get("cost_usd") is not None]
+    usage_metrics = metrics.get("llm_usage") or {}
+    metric_cost = _cost(usage_metrics.get("cost_usd"))
+    total_cost = (
+        metric_cost if metric_cost is not None else (sum(span_costs) if span_costs else None)
+    )
     started = _timestamp(result.get("started_at"))
     finished = _timestamp(result.get("finished_at"))
     return {
@@ -180,8 +202,9 @@ def build_view_model(payload: Mapping[str, Any]) -> dict[str, Any]:
             "token_count": int(
                 (metrics.get("llm_usage") or {}).get("total_tokens", total_tokens) or total_tokens
             ),
-            "cost_usd": float(
-                (metrics.get("llm_usage") or {}).get("cost_usd", total_cost) or total_cost
+            "cost_usd": total_cost,
+            "cost_status": usage_metrics.get(
+                "cost_status", "calculated" if total_cost is not None else "unknown"
             ),
             "retry_count": sum(int(span.get("retry_count", 0)) for span in spans),
         },
@@ -232,7 +255,7 @@ def render_trace_html(payload: Mapping[str, Any], *, title: str = "Deep Research
         ("DAG nodes", len(view["dag_nodes"])),
         ("Agent spans", view["summary"]["span_count"]),
         ("Tokens", view["summary"]["token_count"]),
-        ("Cost (USD)", f"{view['summary']['cost_usd']:.6f}"),
+        ("Cost (USD)", _format_cost(view["summary"]["cost_usd"])),
     ]
     dag = (
         "".join(
@@ -260,7 +283,7 @@ def render_trace_html(payload: Mapping[str, Any], *, title: str = "Deep Research
                 span.get("status"),
                 f"{span.get('duration_ms', 0):.1f}",
                 (span.get("token_usage") or {}).get("total", 0),
-                f"{span.get('cost_usd', 0):.6f}",
+                _format_cost(span.get("cost_usd")),
                 span.get("retry_count", 0),
                 span.get("input_summary"),
                 span.get("output_summary"),

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from collections import Counter, defaultdict
 
 
 _BRACKETED_OMISSION = re.compile(r"(?:\[|【)\s*(?:\.{3,}|…+|⋯+|。{3,})\s*(?:\]|】)")
@@ -157,3 +158,87 @@ def normalize_evidence_bound_language(text: str) -> tuple[str, int]:
         normalized, count = pattern.subn(replacement, normalized)
         changes += count
     return normalized, changes
+
+
+_CITATION_JOIN = re.compile(r"(\[[A-Za-z0-9_-]+-E\d+\])(?=[A-Za-z0-9\u3400-\u9fff])")
+_CITATION_TOKEN = re.compile(r"\[[A-Za-z0-9_-]+-E\d+\]")
+_COUNT_WORDS = {
+    "一": 1,
+    "二": 2,
+    "两": 2,
+    "三": 3,
+    "四": 4,
+    "五": 5,
+    "六": 6,
+    "七": 7,
+    "八": 8,
+    "九": 9,
+    "十": 10,
+}
+_EXPLICIT_COUNT = re.compile(
+    r"(?P<count>\d+|[一二两三四五六七八九十])\s*(?:个|种|类|项)\s*"
+    r"(?P<label>[^，。；：:（）()\n]{2,32})"
+)
+_PAREN_LIST = re.compile(
+    r"(?P<label>[^，。；：:（）()\n]{4,48})[（(](?P<items>[^（）()\n]{3,160})[）)]"
+)
+_COUNT_TERMS = ("类别", "类型", "资源", "特性", "步骤", "阶段", "角色", "渠道", "原则")
+
+
+def normalize_patch_boundaries(text: str) -> str:
+    """Repair deterministic formatting joins created at patch boundaries."""
+
+    normalized = _CITATION_JOIN.sub(r"\1 ", text)
+    normalized = re.sub(r"[ \t]+([，。；：！？,.;:!?])", r"\1", normalized)
+    normalized = re.sub(r"[ \t]+\n", "\n", normalized)
+    return normalized
+
+
+def _count_value(raw: str) -> int | None:
+    if raw.isdigit():
+        return int(raw)
+    return _COUNT_WORDS.get(raw)
+
+
+def _count_topic(label: str) -> str:
+    compact = re.sub(r"\s+", "", label)
+    term = next((item for item in _COUNT_TERMS if item in compact), "")
+    acronyms = re.findall(r"\b[A-Z][A-Z0-9_-]{1,}\b", label)
+    if term:
+        return f"{acronyms[-1] + ':' if acronyms else ''}{term}"
+    return compact[-12:]
+
+
+def report_integrity_issues(report: str) -> set[str]:
+    """Return stable issue codes for duplicate, join, and enumeration defects."""
+
+    issues: set[str] = set()
+    if _CITATION_JOIN.search(report):
+        issues.add("citation_boundary_join")
+
+    clauses: list[str] = []
+    for raw in re.split(r"[。！？!?；;\n]+", report):
+        semantic = _CITATION_TOKEN.sub("", raw)
+        semantic = re.sub(r"^[#>*\-+\d.)、\s]+", "", semantic)
+        semantic = re.sub(r"\s+", "", semantic).strip("，,:：。；;*_")
+        if len(semantic) < 12 or "证据缺口" in semantic or "基于当前证据" in semantic:
+            continue
+        clauses.append(semantic.casefold())
+    for clause, count in Counter(clauses).items():
+        if count > 1:
+            issues.add(f"duplicate_claim:{clause[:24]}")
+
+    counts: dict[str, set[int]] = defaultdict(set)
+    for match in _EXPLICIT_COUNT.finditer(report):
+        value = _count_value(match.group("count"))
+        if value is not None:
+            counts[_count_topic(match.group("label"))].add(value)
+    for match in _PAREN_LIST.finditer(report):
+        items = [item.strip() for item in re.split(r"[、,，/]", match.group("items"))]
+        items = [item for item in items if item]
+        if len(items) >= 2:
+            counts[_count_topic(match.group("label"))].add(len(items))
+    for topic, values in counts.items():
+        if len(values) > 1:
+            issues.add(f"enumeration_conflict:{topic}:{','.join(map(str, sorted(values)))}")
+    return issues

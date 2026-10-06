@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import os
 import uuid
 from dataclasses import asdict, dataclass, replace
 from pathlib import Path
@@ -17,6 +16,7 @@ from .adversarial import (
 )
 from .agents import Synthesizer
 from .claims import ClaimEvidenceVerifier, extract_claims, is_reviewable_claim
+from .comparison import build_comparison_coverage, enforce_comparison_coverage
 from .config import ResearchConfig
 from .harness import (
     AgentRuntime,
@@ -63,6 +63,7 @@ from .tracing import (
     usage_delta,
     usage_snapshot,
 )
+from .versioning import engine_version, source_commit
 
 
 @dataclass
@@ -351,7 +352,8 @@ class DeepResearchAgent:
                 run_id,
                 question,
                 metadata={
-                    "engine_version": os.getenv("RESEARCH_ENGINE_VERSION", "dev"),
+                    "engine_version": engine_version(),
+                    "source_commit": source_commit(),
                     "trace_id": initial_trace_id,
                     "trace_schema_version": TRACE_SCHEMA_VERSION,
                 },
@@ -417,13 +419,14 @@ class DeepResearchAgent:
         llm_config = getattr(getattr(self.synthesizer, "llm", None), "config", None)
         provider = getattr(llm_config, "provider", None)
         current_run_metadata: dict[str, Any] = {
-            "engine_version": os.getenv("RESEARCH_ENGINE_VERSION", "dev"),
+            "engine_version": engine_version(),
+            "source_commit": source_commit(),
             "research_config": asdict(self.config),
             "prompt_schema_versions": {
-                "planner": "v1",
+                "planner": "v2",
                 "synthesizer": "v3",
                 "red_review": "v3",
-                "blue_patch": "v4",
+                "blue_patch": "v5",
                 "claim_verifier": "v4",
             },
             "llm": {
@@ -717,6 +720,7 @@ class DeepResearchAgent:
             if resume_checkpoint is not None
             else 1
         )
+        final_comparison_coverage = build_comparison_coverage(question, draft)
         for review_round in range(starting_review_round, swarm.max_review_rounds + 1):
             if not budget.try_consume(BudgetResource.REVIEW_ROUND):
                 reason = (
@@ -734,7 +738,23 @@ class DeepResearchAgent:
                 input_value={"question": question, "report": draft, "evidences": evidences},
                 awaitable=self.reviewer.review(question, draft, evidences),
             )
+            final_comparison_coverage = build_comparison_coverage(question, draft)
+            final_review = enforce_comparison_coverage(
+                final_review,
+                final_comparison_coverage,
+            )
             final_review = convergence.update(draft, final_review)
+            trace.append(
+                {
+                    "at": utc_now(),
+                    "event": "comparison_evidence_matrix",
+                    "round": review_round,
+                    **final_comparison_coverage.to_dict(),
+                    "repair_queries": final_comparison_coverage.repair_queries(
+                        limit=self.config.max_verification_queries_per_round
+                    ),
+                }
+            )
             trace.append(
                 {
                     "at": utc_now(),
@@ -772,7 +792,9 @@ class DeepResearchAgent:
                 or pre_repair_ledger.verification_mode == "semantic"
             )
             pre_claim_gate_passed = (
-                pre_support_rate >= self.config.min_claim_support_rate and pre_semantic_available
+                pre_support_rate >= self.config.min_claim_support_rate
+                and pre_semantic_available
+                and final_comparison_coverage.passed
             )
             quality_guardrail_action = None
             if self.config.enable_dynamic_swarm:
@@ -796,6 +818,20 @@ class DeepResearchAgent:
                 elif quality_guardrail_action == "fallback_fixed_harness":
                     verification_agent_override = self.worker_spec
                     fixed_fallback_requested = True
+                if not final_comparison_coverage.passed and quality_guardrail_action is None:
+                    quality_guardrail_action = "add_evidence_verifier"
+                    verification_agent_override = AgentSpec(
+                        agent_id=f"{self.worker_spec.agent_id}-comparison-verifier",
+                        role="evidence_verifier",
+                        description="Quality guardrail: fill A/B comparison evidence cells",
+                        tool_names=self.worker_spec.tool_names,
+                        model=self.worker_spec.model,
+                        metadata={
+                            **self.worker_spec.metadata,
+                            "swarm_managed": True,
+                            "comparison_quality_guardrail": True,
+                        },
+                    )
                 if quality_guardrail_action:
                     trace.append(
                         {
@@ -815,9 +851,13 @@ class DeepResearchAgent:
                     "triggered": quality_guardrail_action == "add_evidence_verifier",
                     "action": quality_guardrail_action or "keep_current_roles",
                     "reason": (
-                        "claim_support_below_minimum"
-                        if pre_support_rate < self.config.min_claim_support_rate
-                        else "claim_support_meets_minimum"
+                        "comparison_evidence_matrix_incomplete"
+                        if not final_comparison_coverage.passed
+                        else (
+                            "claim_support_below_minimum"
+                            if pre_support_rate < self.config.min_claim_support_rate
+                            else "claim_support_meets_minimum"
+                        )
                     ),
                     "claim_support_rate": pre_support_rate,
                     "minimum_claim_support_rate": self.config.min_claim_support_rate,
@@ -872,8 +912,17 @@ class DeepResearchAgent:
                 pre_repair_ledger,
                 limit=claim_query_limit,
             )
+            comparison_queries = final_comparison_coverage.repair_queries(
+                limit=self.config.max_verification_queries_per_round,
+            )
             verification_queries = list(
-                dict.fromkeys([*claim_queries, *final_review.repair_queries])
+                dict.fromkeys(
+                    [
+                        *comparison_queries,
+                        *final_review.repair_queries,
+                        *claim_queries,
+                    ]
+                )
             )[: self.config.max_verification_queries_per_round]
             if verification_queries:
                 new_evidence = await self._verify_issues(
@@ -920,7 +969,8 @@ class DeepResearchAgent:
                     "stage": "after_targeted_retrieval",
                     "verification_mode": post_retrieval_ledger.verification_mode,
                     "ledger_reused": post_ledger_reused,
-                    "targeted_queries": claim_queries,
+                    "targeted_queries": verification_queries,
+                    "comparison_queries": comparison_queries,
                     "targeted_evidence_count": (len(new_evidence) if verification_queries else 0),
                     **post_retrieval_ledger.metrics,
                 }
@@ -955,7 +1005,8 @@ class DeepResearchAgent:
                         ],
                     }
                 )
-                continue
+                if final_comparison_coverage.passed:
+                    continue
             if claim_patch_result.rejected:
                 trace.append(
                     {
@@ -1411,6 +1462,18 @@ class DeepResearchAgent:
             if claim_ledger.metrics.get(metric_name, 0.0) > 0:
                 completion_issue_reasons.append(reason)
         evidence_gap_count = int(claim_ledger.metrics.get("evidence_gap_statement_count", 0.0))
+        final_comparison_coverage = build_comparison_coverage(question, draft)
+        trace.append(
+            {
+                "at": utc_now(),
+                "event": "comparison_evidence_matrix",
+                "round": "final",
+                **final_comparison_coverage.to_dict(),
+                "repair_queries": final_comparison_coverage.repair_queries(
+                    limit=self.config.max_verification_queries_per_round
+                ),
+            }
+        )
         evidence_gap_reasons: list[str] = []
         if evidence_gap_count:
             evidence_gap_reasons.append("explicit_evidence_gap_statements")
@@ -1430,6 +1493,8 @@ class DeepResearchAgent:
             evidence_gap_reasons.append("red_detected_evidence_gaps")
         if adjudicated_red_disagreements:
             evidence_gap_reasons.append("red_claim_verifier_disagreements")
+        if final_comparison_coverage.applicable and not final_comparison_coverage.passed:
+            evidence_gap_reasons.append("comparison_evidence_matrix_incomplete")
 
         blocking_review_issues = [
             issue
@@ -1516,6 +1581,9 @@ class DeepResearchAgent:
             "completion_issue_reasons": completion_issue_reasons,
             "evidence_gap_reasons": evidence_gap_reasons,
             "evidence_gap_count": evidence_gap_count,
+            "comparison_evidence_coverage": final_comparison_coverage.coverage_rate,
+            "comparison_missing_cell_count": len(final_comparison_coverage.missing),
+            "comparison_evidence_matrix": final_comparison_coverage.to_dict(),
             "blocking_review_issue_count": len(blocking_review_issues),
             "red_claim_verifier_adjudication_count": len(adjudicated_red_disagreements),
             "review_issue_dimension_counts": review_issue_dimension_counts,
