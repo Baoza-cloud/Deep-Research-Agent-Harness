@@ -961,6 +961,7 @@ class DeepResearchAgent:
                 evidences,
                 post_retrieval_ledger,
             )
+            deterministic_patch_changed = claim_patch_result.changed
             trace.append(
                 {
                     "at": utc_now(),
@@ -1005,8 +1006,6 @@ class DeepResearchAgent:
                         ],
                     }
                 )
-                if final_comparison_coverage.passed:
-                    continue
             if claim_patch_result.rejected:
                 trace.append(
                     {
@@ -1088,6 +1087,24 @@ class DeepResearchAgent:
                             patch_id: ledger.metrics
                             for patch_id, ledger in patch_result.validation_ledgers.items()
                         },
+                    }
+                )
+                continue
+
+            if deterministic_patch_changed:
+                trace.append(
+                    {
+                        "at": utc_now(),
+                        "event": "blue_repair",
+                        "round": review_round,
+                        "mode": "structured_patch",
+                        "requested_patch_count": patch_result.requested_count,
+                        "applied_patches": [],
+                        "rejected_patches": [
+                            {"patch_id": item.patch_id, "reason": item.reason}
+                            for item in patch_result.rejected
+                        ],
+                        "reason": "deterministic_patch_retained_pending_next_red_review",
                     }
                 )
                 continue
@@ -1225,6 +1242,11 @@ class DeepResearchAgent:
         final_citation_coverage = float(
             final_review.metrics.get("citation_coverage", 0.0) if final_review else 0.0
         )
+        fallback_blocking_issue_count = sum(
+            is_blocking_review_issue(issue, self.config.max_pass_issue_severity)
+            for issue in (final_review.structured_issues if final_review else [])
+        )
+        fallback_red_review_failed = bool(final_review and not final_review.passed)
         fallback_triggered = bool(
             self.config.enable_dynamic_swarm
             and not forced_synthesis
@@ -1232,6 +1254,7 @@ class DeepResearchAgent:
                 fixed_fallback_requested
                 or final_citation_coverage < self.config.min_citation_coverage
                 or claim_support_rate < self.config.min_claim_support_rate
+                or fallback_red_review_failed
             )
         )
         fallback_trigger_reasons: list[str] = []
@@ -1241,6 +1264,10 @@ class DeepResearchAgent:
             fallback_trigger_reasons.append("citation_coverage_below_minimum")
         if claim_support_rate < self.config.min_claim_support_rate:
             fallback_trigger_reasons.append("claim_support_below_minimum")
+        if fallback_blocking_issue_count:
+            fallback_trigger_reasons.append("red_review_blocking_issues")
+        elif fallback_red_review_failed:
+            fallback_trigger_reasons.append("red_review_failed_without_blocking_details")
         if not self.config.enable_dynamic_swarm:
             fallback_trigger_reasons.append("dynamic_swarm_disabled")
         if forced_synthesis:
@@ -1254,6 +1281,8 @@ class DeepResearchAgent:
                 "observed": {
                     "citation_coverage": final_citation_coverage,
                     "claim_support_rate": claim_support_rate,
+                    "red_review_passed": not fallback_red_review_failed,
+                    "blocking_review_issue_count": fallback_blocking_issue_count,
                 },
                 "thresholds": {
                     "min_citation_coverage": self.config.min_citation_coverage,
@@ -1530,7 +1559,7 @@ class DeepResearchAgent:
         if final_review and any(
             issue.category == "citation_error" for issue in blocking_review_issues
         ):
-            completion_issue_reasons.append("citation_coverage_below_threshold")
+            completion_issue_reasons.append("citation_quality_issues")
         if forced_synthesis:
             status = CompletionStatus.PARTIAL_TIMEOUT.value
         elif has_review_defect:
