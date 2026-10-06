@@ -69,11 +69,14 @@ flowchart TB
 
 ## 真实 Web 演示
 
-[`evaluation/demo/web_showcase_v1`](evaluation/demo/web_showcase_v1) 保存了一次 DeepSeek + Tavily 的完整真实
-Web 演示：8 节点 DAG、5 类动态角色、104→52 的检索过滤、逐句 Claim 验证、8 个确定性 Blue Patch、
-增量验证以及 `completed_with_evidence_gaps` 的诚实失败状态。目录同时提供 2–3 分钟
-讲稿、一页实验与失败案例、Trace 导航和面试问答；公开 Bundle 保留完整执行事件和来源元数据，但不再分发
-Tavily 返回的网页正文。
+[`evaluation/demo/live_v1_2_1_k8s_gateway_20261006`](evaluation/demo/live_v1_2_1_k8s_gateway_20261006)
+保存了一次 142.85 秒的 DeepSeek + Tavily 真实运行：8 节点 DAG、4 类动态角色、104→52
+的检索过滤、逐句 Claim 验证、8 个已应用的 Structured Blue Patch，以及可验证的确定性 Replay。
+系统最终返回 `completed_with_review_issues`：即使 Claim 支持率和引用覆盖率均为 100%，Red Agent
+仍拦截了“一处数字与所引证据不一致”的严重事实错误。目录提供自包含 HTML Trace Viewer、最终报告、
+2–3 分钟讲稿和一页失败复盘；公开 Bundle 保留完整执行事件与来源元数据，但不重新分发 Tavily
+返回的网页正文。原 v1.2.0 展示包仍保留在
+[`evaluation/demo/web_showcase_v1`](evaluation/demo/web_showcase_v1)，用于历史版本复现。
 
 ## 快速开始
 
@@ -390,7 +393,7 @@ Deep-Research-Agent-Harness/
 │   ├── run_ablation_experiments.py
 │   └── validate_formal_ablation.py
 ├── tests/                            # 按 Harness / Retrieval / Verifier 等领域拆分
-├── release/v1.2.0/SHA256SUMS         # 代码、数据、正式实验与演示哈希
+├── release/v1.2.1/SHA256SUMS         # 代码、数据、正式实验与演示哈希
 ├── docs/DEEP_RESEARCH_AGENT.md
 ├── .env.example
 └── pyproject.toml
@@ -400,9 +403,9 @@ Deep-Research-Agent-Harness/
 
 ## 发布与参与
 
-- 当前版本：`v1.2.0`
+- 当前版本：`v1.2.1`
 - [版本记录](CHANGELOG.md)
 - [贡献指南](CONTRIBUTING.md)
 - [安全策略](SECURITY.md)
 - [MIT License](LICENSE)
-- [v1.2.0 可复现哈希](release/v1.2.0/SHA256SUMS)
+- [v1.2.1 可复现哈希](release/v1.2.1/SHA256SUMS)

@@ -12,6 +12,8 @@ All notable changes to this project are documented in this file. The project fol
 - Transactional Blue Patch integrity gates for duplicate Claims, citation-boundary joins, and
   enumeration conflicts; unsafe patches are rolled back individually.
 - Source commit metadata and package-derived engine versions for reproducible online runs.
+- A sanitized DeepSeek + Tavily Web showcase with a self-contained Trace Viewer, deterministic
+  Replay proof, final report, one-page incident review, and a 2–3 minute demo script.
 
 ### Changed
 
@@ -28,6 +30,8 @@ All notable changes to this project are documented in this file. The project fol
 - 136 offline tests and 84% branch coverage.
 - Regression coverage for asymmetric comparisons, duplicate/format/enumeration Patch rollback,
   unknown-cost telemetry, and release identity metadata.
+- A 142.85-second Kubernetes comparison run whose quality gate retained a severity-3 factual
+  mismatch as `completed_with_review_issues` instead of presenting the report as publishable.
 
 ## [1.2.0] - 2026-10-06
 

@@ -84,6 +84,10 @@ def build_summary(payload: dict[str, Any]) -> dict[str, Any]:
         "quality_guard_triggered": payload["metrics"]["dynamic_quality_fallback_triggered"],
         "quality_guard": payload["metrics"]["dynamic_quality_candidates"],
         "quality_guard_selected_fixed": payload["metrics"]["dynamic_quality_fallback_selected"],
+        "comparison_evidence_coverage": payload["metrics"].get("comparison_evidence_coverage", 1.0),
+        "comparison_missing_cell_count": payload["metrics"].get("comparison_missing_cell_count", 0),
+        "blocking_review_issue_count": payload["metrics"].get("blocking_review_issue_count", 0),
+        "cost_status": payload["metrics"].get("llm_usage", {}).get("cost_status", "unknown"),
         "prompt_injection_evidence_count": payload["metrics"]["prompt_injection_evidence_count"],
         "completion_issue_reasons": payload["metrics"]["completion_issue_reasons"],
         "event_counts": dict(Counter(item["event"] for item in trace)),
@@ -91,7 +95,30 @@ def build_summary(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def write_report(payload: dict[str, Any], target: Path) -> None:
-    lines = [payload["answer"].rstrip(), "", "## 证据索引", ""]
+    metrics = payload["metrics"]
+    review = payload.get("review") or {}
+    blockers = [
+        issue
+        for issue in review.get("structured_issues", [])
+        if int(issue.get("severity", 0)) > 1
+        and issue.get("category") in {"factual_error", "inference_overreach", "citation_error"}
+    ]
+    gate_message = (
+        "本报告通过发布门禁。"
+        if payload["status"] == "completed"
+        else "本报告未通过发布门禁；保留原始输出用于演示 Harness 如何暴露质量问题。"
+    )
+    lines = [
+        f"> **运行状态：`{payload['status']}`。** {gate_message}",
+        "> "
+        f"Claim 支持率 {metrics.get('claim_support_rate', 0):.2%}；"
+        f"引用覆盖率 {metrics.get('citation_coverage', 0):.2%}；"
+        f"A/B 证据覆盖率 {metrics.get('comparison_evidence_coverage', 1):.2%}；"
+        f"阻断问题 {metrics.get('blocking_review_issue_count', 0)} 个。",
+    ]
+    for issue in blockers[:3]:
+        lines.append(f"> - [{issue.get('issue_id')}] {issue.get('description')}")
+    lines.extend(["", payload["answer"].rstrip(), "", "## 证据索引", ""])
     for item in payload["evidences"]:
         evidence_id = item["evidence_id"]
         title = str(item.get("title") or item.get("source") or "Untitled").replace("\n", " ")
