@@ -1,0 +1,199 @@
+{
+  "source_commit": "74e493646e75f08962fbfff601033db2ad2a6af9",
+  "raw_run_sha256": "f483cb749c2d910e8e72a17db4a409ee830521b2dc348758a7c9f53a691059de",
+  "trace_bundle_sha256": "f54a7b9cc4914aed00e9210a4f329e5af3e199d9b02ad9e9a052c91f4c1596ac",
+  "final_report_sha256": "5734268fca05aaf8e97dcd9da6e0d6df4809c2fb4ee872d6390ed437d9c77859",
+  "summary": {
+    "status": "completed_with_review_issues",
+    "duration_seconds": 136.729,
+    "dag_task_count": 8,
+    "swarm": {
+      "level": "complex",
+      "complexity_score": 0.84,
+      "signals": [
+        "large_dag",
+        "medium_question",
+        "comparison",
+        "high_stakes",
+        "additional_dimensions",
+        "many_constraints"
+      ],
+      "agent_count": 4,
+      "agents": [
+        {
+          "agent_id": "research-worker-scope",
+          "role": "scope_researcher",
+          "tool_names": [
+            "retrieval"
+          ]
+        },
+        {
+          "agent_id": "research-worker-evidence",
+          "role": "evidence_researcher",
+          "tool_names": [
+            "retrieval"
+          ]
+        },
+        {
+          "agent_id": "research-worker-counter",
+          "role": "counter_researcher",
+          "tool_names": [
+            "retrieval"
+          ]
+        },
+        {
+          "agent_id": "research-worker-impact",
+          "role": "impact_analyst",
+          "tool_names": [
+            "retrieval"
+          ]
+        }
+      ],
+      "max_concurrency": 4,
+      "max_worker_invocations": 12,
+      "max_replans": 1,
+      "max_review_rounds": 2,
+      "max_verification_queries": 3,
+      "max_elapsed_seconds": 180.0,
+      "diminishing_returns_patience": 1,
+      "evidence_stagnation_patience": 3,
+      "min_score_improvement": 0.015,
+      "policy": "HeuristicSwarmPolicy",
+      "policy_version": "heuristic-v4",
+      "role_decision": {
+        "action": "balanced",
+        "complexity_level": "complex",
+        "complexity_score": 0.84,
+        "signals": [
+          "large_dag",
+          "medium_question",
+          "comparison",
+          "high_stakes",
+          "additional_dimensions",
+          "many_constraints"
+        ],
+        "selected_roles": [
+          "scope_researcher",
+          "evidence_researcher",
+          "counter_researcher",
+          "impact_analyst"
+        ],
+        "omitted_roles": [
+          "researcher",
+          "evidence_verifier"
+        ],
+        "role_reasons": {
+          "scope_researcher": "Clarifies scope and definitions for a multi-stage task.",
+          "evidence_researcher": "Collects primary evidence for standard and complex tasks.",
+          "counter_researcher": "Actively searches for counter-evidence and limitations.",
+          "impact_analyst": "Complex tasks require risk and trade-off analysis."
+        },
+        "explanation": "The standard tier adds scope, evidence and counter-evidence roles.",
+        "max_concurrency": 4,
+        "max_worker_invocations": 12
+      }
+    },
+    "retrieval": {
+      "batches": 11,
+      "candidate_count": 104,
+      "selected_count": 52,
+      "filtered_count": 52,
+      "removal_reasons": {
+        "result_limit": 44,
+        "duplicate_content": 8
+      },
+      "selected_source_classes": {
+        "official_documentation": 47,
+        "web": 5
+      }
+    },
+    "claim_verification": {
+      "claim_count": 45.0,
+      "reviewable_claim_count": 40.0,
+      "supported_claim_count": 40.0,
+      "partially_supported_claim_count": 0.0,
+      "contradicted_claim_count": 0.0,
+      "uncited_claim_count": 0.0,
+      "insufficient_claim_count": 0.0,
+      "unknown_claim_count": 0.0,
+      "unsupported_claim_count": 0.0,
+      "claim_support_rate": 1.0,
+      "citation_correctness": 0.9772727272727273,
+      "aligned_uncited_support_count": 40.0,
+      "time_conflict_count": 0.0,
+      "number_conflict_count": 0.0,
+      "entity_conflict_count": 0.0,
+      "evidence_gap_statement_count": 0.0,
+      "verification_pair_count": 0.0,
+      "semantic_judged_pair_count": 0.0,
+      "semantic_unverified_pair_count": 0.0,
+      "semantic_cache_hit_count": 0.0,
+      "semantic_cache_miss_count": 0.0,
+      "semantic_cache_size": 51.0,
+      "reused_unchanged_claim_count": 40.0
+    },
+    "red_blue": {
+      "review_rounds": 2,
+      "repair_events": 2,
+      "applied_patch_count": 8,
+      "rejected_patch_count": 3,
+      "patch_actions": {
+        "MODIFY": 3,
+        "DELETE": 5
+      },
+      "rewrite_fallbacks": 0
+    },
+    "incremental_verification": {
+      "alignment_events": 3,
+      "final_reused_unchanged_claim_count": 40.0
+    },
+    "quality_guard_triggered": true,
+    "quality_guard": {
+      "dynamic": {
+        "claim_support_rate": 1.0,
+        "citation_coverage": 1.0,
+        "blocking_issue_count": 7
+      },
+      "fixed_harness_fallback": {
+        "claim_support_rate": 1.0,
+        "citation_coverage": 1.0,
+        "blocking_issue_count": 7
+      }
+    },
+    "quality_guard_selected_fixed": false,
+    "comparison_evidence_coverage": 0.875,
+    "comparison_missing_cell_count": 1,
+    "blocking_review_issue_count": 1,
+    "cost_status": "unknown",
+    "prompt_injection_evidence_count": 0,
+    "completion_issue_reasons": [
+      "red_review_failed"
+    ],
+    "event_counts": {
+      "component_started": 12,
+      "component_completed": 12,
+      "plan_created": 1,
+      "swarm_configured": 1,
+      "swarm_role_decision": 1,
+      "budget_checkpointed": 25,
+      "task_transition": 24,
+      "agent_started": 11,
+      "role_strategy_applied": 11,
+      "retrieval_filter_applied": 11,
+      "agent_completed": 11,
+      "comparison_evidence_matrix": 3,
+      "red_review": 2,
+      "swarm_quality_guardrail": 2,
+      "evidence_verifier_decision": 2,
+      "claim_evidence_alignment": 3,
+      "review_verification": 1,
+      "blue_repair": 2,
+      "swarm_stop": 1,
+      "fixed_fallback_decision": 1,
+      "dynamic_swarm_final_quality_guard": 1,
+      "red_claim_verifier_adjudication": 1,
+      "claim_ledger_built": 1,
+      "run_finalized": 1
+    }
+  }
+}

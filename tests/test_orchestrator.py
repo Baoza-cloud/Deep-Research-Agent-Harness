@@ -80,6 +80,11 @@ class OrchestratorTests(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(guard["selected"], "fixed_harness_fallback")
         self.assertFalse(guard["cost_used_as_quality_override"])
+        decision = next(
+            item for item in result.trace if item.get("event") == "fixed_fallback_decision"
+        )
+        self.assertIn("red_review_blocking_issues", decision["reasons"])
+        self.assertEqual(decision["observed"]["blocking_review_issue_count"], 1)
 
     async def test_explicit_evidence_gap_has_distinct_completion_status(self):
         agent = DeepResearchAgent(
@@ -193,7 +198,8 @@ class OrchestratorTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(result.review.passed)
         self.assertEqual(result.metrics["review_rounds"], 2)
         self.assertEqual(result.metrics["citation_coverage"], 1)
-        self.assertEqual([item["event"] for item in result.trace].count("blue_repair"), 1)
+        blue_modes = [item["mode"] for item in result.trace if item.get("event") == "blue_repair"]
+        self.assertEqual(blue_modes, ["deterministic_claim_patch", "structured_patch"])
 
     async def test_orchestrator_prefers_structured_patch_over_whole_rewrite(self):
         synthesizer = RepairingSynthesizer()
@@ -239,6 +245,8 @@ class OrchestratorTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(synthesizer.calls, 1)
         self.assertEqual(blue_trace[0]["mode"], "deterministic_claim_patch")
         self.assertTrue(blue_trace[0]["applied_patches"][0]["patch_id"].startswith("AUTO-claim-"))
+        self.assertEqual(blue_trace[1]["mode"], "structured_patch")
+        self.assertEqual(blue_trace[1]["applied_patches"][0]["patch_id"], "P1")
 
     async def test_end_to_end_offline(self):
         agent = DeepResearchAgent(

@@ -110,6 +110,35 @@ class HarnessTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(evidences[0].metadata["retrieval_role"], "evidence_verifier")
         self.assertEqual(context.events[0]["event"], "role_strategy_applied")
 
+    async def test_worker_expands_cross_namespace_queries_with_canonical_terms(self):
+        class CapturingBackend:
+            def __init__(self):
+                self.query = ""
+
+            async def search(self, query, limit=5):
+                self.query = query
+                return []
+
+        backend = CapturingBackend()
+        context = RunContext("cross-namespace-run", "verify")
+        await ResearchWorker(backend).run_for_agent(
+            ResearchSubtask(
+                "cross-namespace",
+                "核验 Kubernetes Ingress 与 Gateway API 的跨命名空间安全",
+                "verify",
+            ),
+            AgentSpec("verifier", "evidence_verifier", tool_names=("retrieval",)),
+            context,
+        )
+
+        self.assertIn(
+            "Ingress cross namespace backend Service TLS Secret same namespace", backend.query
+        )
+        self.assertIn(
+            "Gateway API ReferenceGrant cross namespace HTTPRoute backendRef", backend.query
+        )
+        self.assertEqual(len(context.events[0]["technical_query_hints"]), 2)
+
     async def test_worker_scores_filters_deduplicates_and_traces_retrieval(self):
         canonical_content = (
             "Python asyncio TaskGroup cancellation semantics preserve cancellation "

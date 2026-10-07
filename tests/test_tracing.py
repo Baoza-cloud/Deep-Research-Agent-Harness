@@ -195,6 +195,7 @@ class StructuredTracingTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(model["trace_id"], "tr-viewer")
         self.assertEqual(model["summary"]["token_count"], 42)
+        self.assertEqual(model["duration_ms"], 1_000.0)
         self.assertEqual(len(model["spans"]), 1)
         self.assertIn("DAG 时间线", rendered)
         self.assertIn("并发瀑布图", rendered)

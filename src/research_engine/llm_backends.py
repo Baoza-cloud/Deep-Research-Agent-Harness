@@ -33,8 +33,8 @@ class LLMBackendConfig:
     extra_body: dict[str, Any] | None = None
     request_timeout_seconds: float = 45.0
     max_retries: int = 1
-    input_cost_per_million_usd: float = 0.0
-    output_cost_per_million_usd: float = 0.0
+    input_cost_per_million_usd: float | None = None
+    output_cost_per_million_usd: float | None = None
 
 
 class OpenAICompatibleLLM:
@@ -97,10 +97,22 @@ class OpenAICompatibleLLM:
             getattr(usage, "total_tokens", prompt_tokens + completion_tokens)
             or prompt_tokens + completion_tokens
         )
+        pricing_available = any(
+            float(value or 0.0) > 0
+            for value in (
+                self.config.input_cost_per_million_usd,
+                self.config.output_cost_per_million_usd,
+            )
+        )
         cost = (
-            prompt_tokens * self.config.input_cost_per_million_usd
-            + completion_tokens * self.config.output_cost_per_million_usd
-        ) / 1_000_000
+            (
+                prompt_tokens * float(self.config.input_cost_per_million_usd or 0.0)
+                + completion_tokens * float(self.config.output_cost_per_million_usd or 0.0)
+            )
+            / 1_000_000
+            if pricing_available
+            else 0.0
+        )
         elapsed_ms = (time.monotonic() - started) * 1000
         with self._usage_lock:
             self._usage["prompt_tokens"] += prompt_tokens
@@ -128,7 +140,15 @@ class OpenAICompatibleLLM:
     def usage_snapshot(self) -> dict[str, Any]:
         with self._usage_lock:
             snapshot = dict(self._usage)
-        snapshot["cost_usd"] = round(float(snapshot["cost_usd"]), 9)
+        pricing_available = any(
+            float(value or 0.0) > 0
+            for value in (
+                self.config.input_cost_per_million_usd,
+                self.config.output_cost_per_million_usd,
+            )
+        )
+        snapshot["cost_usd"] = round(float(snapshot["cost_usd"]), 9) if pricing_available else None
+        snapshot["cost_status"] = "calculated" if pricing_available else "unknown"
         snapshot["duration_ms"] = round(float(snapshot["duration_ms"]), 3)
         snapshot["pricing"] = {
             "input_per_million_usd": self.config.input_cost_per_million_usd,
@@ -169,13 +189,15 @@ def backend_config(provider: str | LLMProvider, model: str | None = None) -> LLM
     base_url = os.getenv(f"{prefix}_BASE_URL") or defaults["base_url"]
     request_timeout_seconds = float(os.getenv(f"{prefix}_TIMEOUT_SECONDS", "45"))
     max_retries = int(os.getenv(f"{prefix}_MAX_RETRIES", "1"))
-    input_cost = float(os.getenv(f"{prefix}_INPUT_COST_PER_MILLION_USD", "0"))
-    output_cost = float(os.getenv(f"{prefix}_OUTPUT_COST_PER_MILLION_USD", "0"))
+    raw_input_cost = os.getenv(f"{prefix}_INPUT_COST_PER_MILLION_USD", "").strip()
+    raw_output_cost = os.getenv(f"{prefix}_OUTPUT_COST_PER_MILLION_USD", "").strip()
+    input_cost = float(raw_input_cost) if raw_input_cost else None
+    output_cost = float(raw_output_cost) if raw_output_cost else None
     if request_timeout_seconds <= 0:
         raise ValueError(f"{prefix}_TIMEOUT_SECONDS must be positive")
     if max_retries < 0:
         raise ValueError(f"{prefix}_MAX_RETRIES must be >= 0")
-    if input_cost < 0 or output_cost < 0:
+    if (input_cost is not None and input_cost < 0) or (output_cost is not None and output_cost < 0):
         raise ValueError(f"{prefix} token costs must be >= 0")
     if provider is LLMProvider.VLLM:
         api_key = os.getenv("VLLM_API_KEY", "EMPTY")

@@ -225,8 +225,20 @@ class QualityFallbackSynthesizer:
 class QualityFallbackReviewer:
     async def review(self, question, report, evidences):
         fixed = report.startswith("# fixed fallback")
+        issues = []
+        if not fixed:
+            issues.append(
+                ReviewIssue(
+                    "R-quality",
+                    "citation_quality",
+                    "引用存在但不能直接支持相邻断言",
+                    severity=2,
+                    category="citation_error",
+                )
+            )
         return ReviewResult(
             fixed,
-            metrics={"citation_coverage": 1.0 if fixed else 0.5},
+            structured_issues=issues,
+            metrics={"citation_coverage": 1.0},
             total_score=0.9,
         )

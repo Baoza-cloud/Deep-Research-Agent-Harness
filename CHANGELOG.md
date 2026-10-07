@@ -3,6 +3,36 @@
 All notable changes to this project are documented in this file. The project follows
 [Semantic Versioning](https://semver.org/).
 
+## [1.2.1] - 2026-10-06
+
+### Added
+
+- Deterministic A/B evidence matrices for comparison research, including per-subject,
+  per-dimension coverage metrics and prioritized Evidence Verifier repair queries.
+- Transactional Blue Patch integrity gates for duplicate Claims, citation-boundary joins, and
+  enumeration conflicts; unsafe patches are rolled back individually.
+- Source commit metadata and package-derived engine versions for reproducible online runs.
+- A sanitized DeepSeek + Tavily Web showcase with a self-contained Trace Viewer, deterministic
+  Replay proof, final report, one-page incident review, and a 2–3 minute demo script.
+
+### Changed
+
+- Comparison coverage gaps now take precedence over repeated verification of already represented
+  Claims, and keep the run in an evidence-gap state until both sides are covered.
+- A deterministic Claim repair no longer skips a pending structured comparison-coverage repair.
+- Unconfigured model pricing is reported as `cost_usd=null` with `cost_status=unknown`, rather
+  than as a misleading zero-dollar run.
+- Citation canonicalization now preserves distinct evidence fragments from the same URL, and
+  evidence-gap compaction keeps complete quoted topics without truncating citation tokens.
+
+### Verified
+
+- 136 offline tests and 84% branch coverage.
+- Regression coverage for asymmetric comparisons, duplicate/format/enumeration Patch rollback,
+  unknown-cost telemetry, and release identity metadata.
+- A 142.85-second Kubernetes comparison run whose quality gate retained a severity-3 factual
+  mismatch as `completed_with_review_issues` instead of presenting the report as publishable.
+
 ## [1.2.0] - 2026-10-06
 
 ### Added
@@ -71,6 +101,7 @@ All notable changes to this project are documented in this file. The project fol
 - Shared memory, context compression, Claim–Evidence verification, and Red/Blue repair.
 - ResearchBench Frozen, Live, Adversarial, and retrieval calibration tracks.
 
+[1.2.1]: https://github.com/Baoza-cloud/Deep-Research-Agent-Harness/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/Baoza-cloud/Deep-Research-Agent-Harness/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/Baoza-cloud/Deep-Research-Agent-Harness/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/Baoza-cloud/Deep-Research-Agent-Harness/releases/tag/v1.0.0
