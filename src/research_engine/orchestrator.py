@@ -80,6 +80,8 @@ class ReportQualityCandidate:
     ledger: ClaimLedger
     review: ReviewResult | None
     origin: str
+    comparison_coverage: float = 1.0
+    comparison_missing_cell_count: int = 0
 
     @property
     def claim_support_rate(self) -> float:
@@ -97,6 +99,10 @@ class ReportQualityCandidate:
             for issue in (self.review.structured_issues if self.review else [])
         )
 
+    @property
+    def comparison_complete(self) -> bool:
+        return self.comparison_missing_cell_count == 0 and self.comparison_coverage >= 1.0
+
 
 def select_quality_candidate(
     primary: ReportQualityCandidate,
@@ -111,7 +117,9 @@ def select_quality_candidate(
 
     def hard_pass(candidate: ReportQualityCandidate) -> bool:
         return (
-            metric_gate(candidate) and candidate.blocking_issue_count(max_pass_issue_severity) == 0
+            metric_gate(candidate)
+            and candidate.blocking_issue_count(max_pass_issue_severity) == 0
+            and candidate.comparison_complete
         )
 
     def metric_gate(candidate: ReportQualityCandidate) -> bool:
@@ -133,12 +141,27 @@ def select_quality_candidate(
     if primary_passes and not fallback_passes:
         return primary, "dynamic_clears_hard_quality_gate"
 
+    primary_blockers = primary.blocking_issue_count(max_pass_issue_severity)
+    fallback_blockers = fallback.blocking_issue_count(max_pass_issue_severity)
+    if (
+        fallback.comparison_complete
+        and not primary.comparison_complete
+        and fallback_blockers <= primary_blockers
+    ):
+        return fallback, "fallback_repairs_comparison_evidence_coverage"
+    if (
+        primary.comparison_complete
+        and not fallback.comparison_complete
+        and primary_blockers <= fallback_blockers
+    ):
+        return primary, "fallback_rejected_by_comparison_evidence_coverage"
+
     support_gain = fallback.claim_support_rate - primary.claim_support_rate
     if (
         support_gain > support_drop_tolerance
         and fallback.citation_coverage >= min_citation_coverage
-        and fallback.blocking_issue_count(max_pass_issue_severity)
-        <= primary.blocking_issue_count(max_pass_issue_severity)
+        and fallback_blockers <= primary_blockers
+        and fallback.comparison_coverage >= primary.comparison_coverage
     ):
         return fallback, "fallback_repairs_claim_support_drop"
 
@@ -146,7 +169,10 @@ def select_quality_candidate(
         review_score = candidate.review.total_score if candidate.review else 0.0
         return (
             float(hard_pass(candidate)),
+            float(metric_gate(candidate)),
             -float(candidate.blocking_issue_count(max_pass_issue_severity)),
+            candidate.comparison_coverage,
+            -float(candidate.comparison_missing_cell_count),
             min(candidate.claim_support_rate, candidate.citation_coverage),
             candidate.claim_support_rate,
             candidate.citation_coverage,
@@ -1006,7 +1032,7 @@ class DeepResearchAgent:
                         ],
                     }
                 )
-            if claim_patch_result.rejected:
+            elif claim_patch_result.rejected:
                 trace.append(
                     {
                         "at": utc_now(),
@@ -1242,6 +1268,12 @@ class DeepResearchAgent:
         final_citation_coverage = float(
             final_review.metrics.get("citation_coverage", 0.0) if final_review else 0.0
         )
+        primary_comparison_coverage = build_comparison_coverage(question, draft)
+        if final_review is not None:
+            final_review = enforce_comparison_coverage(
+                final_review,
+                primary_comparison_coverage,
+            )
         fallback_blocking_issue_count = sum(
             is_blocking_review_issue(issue, self.config.max_pass_issue_severity)
             for issue in (final_review.structured_issues if final_review else [])
@@ -1254,6 +1286,7 @@ class DeepResearchAgent:
                 fixed_fallback_requested
                 or final_citation_coverage < self.config.min_citation_coverage
                 or claim_support_rate < self.config.min_claim_support_rate
+                or not primary_comparison_coverage.passed
                 or fallback_red_review_failed
             )
         )
@@ -1264,6 +1297,8 @@ class DeepResearchAgent:
             fallback_trigger_reasons.append("citation_coverage_below_minimum")
         if claim_support_rate < self.config.min_claim_support_rate:
             fallback_trigger_reasons.append("claim_support_below_minimum")
+        if not primary_comparison_coverage.passed:
+            fallback_trigger_reasons.append("comparison_evidence_matrix_incomplete")
         if fallback_blocking_issue_count:
             fallback_trigger_reasons.append("red_review_blocking_issues")
         elif fallback_red_review_failed:
@@ -1283,6 +1318,8 @@ class DeepResearchAgent:
                     "claim_support_rate": claim_support_rate,
                     "red_review_passed": not fallback_red_review_failed,
                     "blocking_review_issue_count": fallback_blocking_issue_count,
+                    "comparison_evidence_coverage": (primary_comparison_coverage.coverage_rate),
+                    "comparison_missing_cell_count": len(primary_comparison_coverage.missing),
                 },
                 "thresholds": {
                     "min_citation_coverage": self.config.min_citation_coverage,
@@ -1368,17 +1405,29 @@ class DeepResearchAgent:
                     evidences,
                 ),
             )
+            fixed_comparison_coverage = build_comparison_coverage(
+                question,
+                fallback_report,
+            )
+            fallback_review = enforce_comparison_coverage(
+                fallback_review,
+                fixed_comparison_coverage,
+            )
             primary_candidate = ReportQualityCandidate(
                 draft,
                 claim_ledger,
                 final_review,
                 "dynamic_swarm",
+                primary_comparison_coverage.coverage_rate,
+                len(primary_comparison_coverage.missing),
             )
             fixed_candidate = ReportQualityCandidate(
                 fallback_report,
                 fallback_ledger,
                 fallback_review,
                 "fixed_harness_fallback",
+                fixed_comparison_coverage.coverage_rate,
+                len(fixed_comparison_coverage.missing),
             )
             selected_candidate, fallback_selection_reason = select_quality_candidate(
                 primary_candidate,
@@ -1408,12 +1457,20 @@ class DeepResearchAgent:
                     "blocking_issue_count": primary_candidate.blocking_issue_count(
                         self.config.max_pass_issue_severity
                     ),
+                    "comparison_evidence_coverage": (primary_candidate.comparison_coverage),
+                    "comparison_missing_cell_count": (
+                        primary_candidate.comparison_missing_cell_count
+                    ),
                 },
                 "fixed_harness_fallback": {
                     "claim_support_rate": fixed_candidate.claim_support_rate,
                     "citation_coverage": fixed_candidate.citation_coverage,
                     "blocking_issue_count": fixed_candidate.blocking_issue_count(
                         self.config.max_pass_issue_severity
+                    ),
+                    "comparison_evidence_coverage": fixed_candidate.comparison_coverage,
+                    "comparison_missing_cell_count": (
+                        fixed_candidate.comparison_missing_cell_count
                     ),
                 },
             }

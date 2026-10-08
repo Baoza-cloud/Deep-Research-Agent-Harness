@@ -129,6 +129,6 @@ jobs:
       - name: Upload distributions
         uses: actions/upload-artifact@v4
         with:
-          name: deep-research-agent-harness-v1.2.1
+          name: deep-research-agent-harness-v1.2.2
           path: dist/*
           if-no-files-found: error

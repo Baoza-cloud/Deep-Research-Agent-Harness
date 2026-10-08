@@ -180,7 +180,7 @@ class ReleaseTelemetryTests(unittest.IsolatedAsyncioTestCase):
 
     def test_engine_identity_ignores_dev_marker_and_records_git_sha(self):
         with patch.dict(os.environ, {"RESEARCH_ENGINE_VERSION": "dev"}, clear=False):
-            self.assertEqual(engine_version(), "v1.2.1")
+            self.assertEqual(engine_version(), "v1.2.2")
         resolved = source_commit()
         self.assertIsNotNone(resolved)
         self.assertRegex(resolved, r"^[0-9a-f]{40}$")

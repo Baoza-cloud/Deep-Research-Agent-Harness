@@ -1,0 +1,222 @@
+{
+  "source_commit": "d6805b2f34dc6717f29deb2250b364f465bf7118+worktree-33125a105a7201e06259eb66c7738dad15907b2927f0b0d13f175b69cea2449e",
+  "raw_run_sha256": "89cbd98e477efd7595352e928f48d3e8ec7b6ace74a6d5ccde4325d3d68f1b67",
+  "trace_bundle_sha256": "ed8456e5e80131aed66fa0330a2249472941268cc6656c3ce7aec0bcf9b751e9",
+  "final_report_sha256": "6933ac8c1fc8a5b0e933b302a99fdd6c0a8d08156f60618ceb388533db6cb3a4",
+  "replay_sha256": "2cb2d88fcc2da5d8c92a5ce57935d630ffe17b67b155e08ca22795e999a1ff5e",
+  "trace_viewer_sha256": "9340159f47ff305b80fb06719de1e476e852b92ae537e63b84c3b61e324af9b4",
+  "summary": {
+    "status": "completed_with_evidence_gaps",
+    "duration_seconds": 285.593,
+    "dag_task_count": 7,
+    "swarm": {
+      "level": "complex",
+      "complexity_score": 0.92,
+      "signals": [
+        "large_dag",
+        "long_question",
+        "comparison",
+        "high_stakes",
+        "additional_dimensions",
+        "many_constraints"
+      ],
+      "agent_count": 5,
+      "agents": [
+        {
+          "agent_id": "research-worker-scope",
+          "role": "scope_researcher",
+          "tool_names": [
+            "retrieval"
+          ]
+        },
+        {
+          "agent_id": "research-worker-evidence",
+          "role": "evidence_researcher",
+          "tool_names": [
+            "retrieval"
+          ]
+        },
+        {
+          "agent_id": "research-worker-counter",
+          "role": "counter_researcher",
+          "tool_names": [
+            "retrieval"
+          ]
+        },
+        {
+          "agent_id": "research-worker-impact",
+          "role": "impact_analyst",
+          "tool_names": [
+            "retrieval"
+          ]
+        },
+        {
+          "agent_id": "research-worker-verify",
+          "role": "evidence_verifier",
+          "tool_names": [
+            "retrieval"
+          ]
+        }
+      ],
+      "max_concurrency": 4,
+      "max_worker_invocations": 17,
+      "max_replans": 1,
+      "max_review_rounds": 4,
+      "max_verification_queries": 12,
+      "max_elapsed_seconds": 360.0,
+      "diminishing_returns_patience": 2,
+      "evidence_stagnation_patience": 3,
+      "min_score_improvement": 0.015,
+      "policy": "HeuristicSwarmPolicy",
+      "policy_version": "heuristic-v4",
+      "role_decision": {
+        "action": "scale_up",
+        "complexity_level": "complex",
+        "complexity_score": 0.92,
+        "signals": [
+          "large_dag",
+          "long_question",
+          "comparison",
+          "high_stakes",
+          "additional_dimensions",
+          "many_constraints"
+        ],
+        "selected_roles": [
+          "scope_researcher",
+          "evidence_researcher",
+          "counter_researcher",
+          "impact_analyst",
+          "evidence_verifier"
+        ],
+        "omitted_roles": [
+          "researcher"
+        ],
+        "role_reasons": {
+          "scope_researcher": "Clarifies scope and definitions for a multi-stage task.",
+          "evidence_researcher": "Collects primary evidence for standard and complex tasks.",
+          "counter_researcher": "Actively searches for counter-evidence and limitations.",
+          "impact_analyst": "Complex tasks require risk and trade-off analysis.",
+          "evidence_verifier": "Complex tasks reserve a role for disputed claim verification."
+        },
+        "explanation": "Complexity signals crossed the complex threshold, enabling all roles.",
+        "max_concurrency": 4,
+        "max_worker_invocations": 17
+      }
+    },
+    "retrieval": {
+      "batches": 17,
+      "candidate_count": 130,
+      "selected_count": 65,
+      "filtered_count": 65,
+      "removal_reasons": {
+        "result_limit": 64,
+        "duplicate_content": 1
+      },
+      "selected_source_classes": {
+        "official_documentation": 25,
+        "source_repository": 3,
+        "web": 37
+      }
+    },
+    "claim_verification": {
+      "claim_count": 59.0,
+      "atomic_claim_count": 59.0,
+      "compound_source_count": 5.0,
+      "reviewable_claim_count": 49.0,
+      "supported_claim_count": 46.0,
+      "partially_supported_claim_count": 2.0,
+      "contradicted_claim_count": 0.0,
+      "uncited_claim_count": 1.0,
+      "insufficient_claim_count": 0.0,
+      "unknown_claim_count": 0.0,
+      "unsupported_claim_count": 3.0,
+      "claim_support_rate": 0.9387755102040817,
+      "full_support_rate": 0.9387755102040817,
+      "partial_support_rate": 0.04081632653061224,
+      "citation_correctness": 0.8688524590163934,
+      "aligned_uncited_support_count": 24.0,
+      "time_conflict_count": 0.0,
+      "number_conflict_count": 0.0,
+      "entity_conflict_count": 0.0,
+      "evidence_gap_statement_count": 0.0,
+      "verification_pair_count": 14.0,
+      "semantic_judged_pair_count": 14.0,
+      "semantic_unverified_pair_count": 0.0,
+      "semantic_cache_hit_count": 2.0,
+      "semantic_cache_miss_count": 12.0,
+      "semantic_cache_size": 273.0,
+      "reused_unchanged_claim_count": 45.0,
+      "deterministic_override_count": 2.0,
+      "report_internal_count_conflict_count": 0.0
+    },
+    "red_blue": {
+      "review_rounds": 4,
+      "repair_events": 7,
+      "applied_patch_count": 43,
+      "rejected_patch_count": 21,
+      "patch_actions": {
+        "MODIFY": 33,
+        "DELETE": 8,
+        "ADD": 2
+      },
+      "rewrite_fallbacks": 0
+    },
+    "incremental_verification": {
+      "alignment_events": 7,
+      "final_reused_unchanged_claim_count": 45.0
+    },
+    "quality_guard_triggered": true,
+    "quality_guard": {
+      "dynamic": {
+        "claim_support_rate": 0.9387755102040817,
+        "citation_coverage": 0.9795918367346939,
+        "blocking_issue_count": 0,
+        "comparison_evidence_coverage": 0.6666666666666666,
+        "comparison_missing_cell_count": 2
+      },
+      "fixed_harness_fallback": {
+        "claim_support_rate": 0.9782608695652174,
+        "citation_coverage": 1.0,
+        "blocking_issue_count": 9,
+        "comparison_evidence_coverage": 0.6666666666666666,
+        "comparison_missing_cell_count": 2
+      }
+    },
+    "quality_guard_selected_fixed": false,
+    "comparison_evidence_coverage": 0.6666666666666666,
+    "comparison_missing_cell_count": 2,
+    "blocking_review_issue_count": 0,
+    "cost_status": "unknown",
+    "prompt_injection_evidence_count": 1,
+    "completion_issue_reasons": [
+      "partially_supported_claims",
+      "uncited_claims"
+    ],
+    "event_counts": {
+      "component_started": 22,
+      "component_completed": 22,
+      "plan_created": 1,
+      "swarm_configured": 1,
+      "swarm_role_decision": 1,
+      "budget_checkpointed": 49,
+      "task_transition": 21,
+      "agent_started": 17,
+      "role_strategy_applied": 17,
+      "retrieval_filter_applied": 17,
+      "agent_completed": 17,
+      "comparison_evidence_matrix": 5,
+      "red_review": 4,
+      "swarm_quality_guardrail": 4,
+      "evidence_verifier_decision": 4,
+      "claim_evidence_alignment": 7,
+      "review_verification": 3,
+      "blue_repair": 7,
+      "budget_denied": 2,
+      "swarm_stop": 1,
+      "fixed_fallback_decision": 1,
+      "dynamic_swarm_final_quality_guard": 1,
+      "claim_ledger_built": 1,
+      "run_finalized": 1
+    }
+  }
+}

@@ -6,6 +6,7 @@ import hashlib
 import json
 import re
 from collections import Counter
+from difflib import SequenceMatcher
 from typing import Sequence
 from urllib.parse import urldefrag
 
@@ -40,9 +41,6 @@ from .text_quality import (
 CITATION_PATTERN = re.compile(r"\[([A-Za-z0-9_-]+-E\d+)\]")
 CITATION_ONLY_PATTERN = re.compile(r"\s*(?:\[[A-Za-z0-9_-]+-E\d+\]\s*)+")
 TOKEN_PATTERN = re.compile(r"[A-Za-z0-9_]+|[\u4e00-\u9fff]")
-# A citation placed immediately after sentence punctuation still belongs to that
-# sentence. Do not split it into an artificial standalone "claim".
-CLAIM_SPLIT = re.compile(r"(?<=[。！？!?\.])\s+(?!\[[A-Za-z0-9_-]+-E\d+\])|\n+")
 CODE_BLOCK = re.compile(r"```[\s\S]*?```")
 MARKDOWN_HEADING = re.compile(r"^\s*#{1,6}\s+(.+)$")
 NON_CLAIM_SECTION = re.compile(r"来源|证据索引|参考文献|证据目录")
@@ -52,7 +50,25 @@ LIMITATION_DISCLOSURE = re.compile(
     r"(?:局限|不确定|受限|有限|限制|未覆盖|证据不足|证据缺口)"
 )
 UNSUPPORTED_DELETE_REASON = re.compile(
-    r"不支持|未支持|并未|冲突|矛盾|错误|证据错配|无依据|虚构|误导"
+    r"不支持|未(?:直接)?支持|并未|冲突|矛盾|错误|错配|不匹配|匹配度不足|"
+    r"未提及|未说明|无依据|虚构|误导|不能推出|无法推出|超出证据|"
+    r"推断越界|缺少直接证据"
+)
+ISSUE_QUOTED_TEXT = re.compile(r"[“\"](?P<text>[^”\"\n]{6,260})[”\"]")
+CITATION_EXPLAINED_CLAIM = re.compile(
+    r"引用[^，。；\n]{0,100}?说明\s*[“\"]?(?P<text>[^”，。；\n]{6,260})"
+)
+ACKNOWLEDGED_EVIDENCE_CLAUSE = re.compile(
+    r"(?:仅|明确|直接)(?:说明|支持)\s*(?P<text>[^；。\n]{6,260})"
+)
+EVIDENCE_ID_TEXT = re.compile(r"\b[A-Za-z0-9_-]+-E\d+\b")
+EXPLICIT_SUPPORT_EVIDENCE = re.compile(
+    r"(?:实际由|需要)\s*(?P<evidence_id>[A-Za-z0-9_-]+-E\d+)"
+    r"(?:\s*等)?\s*(?:证据)?(?:直接)?支持"
+)
+SECTION_ITEM_LOCATOR = re.compile(
+    r"(?:[“\"](?P<quoted>[^”\"]+)[”\"]|(?P<plain>结论|建议))"
+    r"\s*第\s*(?P<item>\d+)\s*条"
 )
 LIST_PREFIX = re.compile(r"^(?:[-+*]\s+|\d+[.)、]\s*)")
 ORPHAN_MARKDOWN_LINE = re.compile(r"^(?:[-+]\s*|\*{1,2}\s*|\*{0,2}\d+[.)、]?\s*\*{0,2})$")
@@ -288,6 +304,242 @@ def _resolve_cited_delete_target(
     if not cited_ids or not cited_ids <= valid_ids:
         return None
     return line, cited_ids
+
+
+def _normalize_issue_locator(text: str) -> str:
+    """Normalize prose for conservative Red issue-to-Claim matching."""
+
+    value = CITATION_PATTERN.sub("", text)
+    value = re.sub(r"[`*_#\s]", "", value)
+    return re.sub(r"[，,。；;：:！？!?、（）()‘’“\"”'\-]", "", value).casefold()
+
+
+def _issue_claim_phrases(issue: ReviewIssue) -> list[str]:
+    """Extract only explicit problematic prose from a Red description."""
+
+    locator_labels = {
+        _normalize_issue_locator(match.group("quoted") or match.group("plain") or "")
+        for match in SECTION_ITEM_LOCATOR.finditer(str(issue.target or ""))
+    }
+    phrases: list[str] = []
+    for match in ISSUE_QUOTED_TEXT.finditer(issue.description):
+        phrase = match.group("text").strip()
+        phrase_key = _normalize_issue_locator(phrase)
+        if any(
+            phrase_key == label or phrase_key in label or label in phrase_key
+            for label in locator_labels
+            if label
+        ):
+            continue
+        prefix = issue.description[max(0, match.start() - 8) : match.start()]
+        if not phrases or re.search(r"(?:推断为|推出|外推为|或)\s*$", prefix):
+            phrases.append(phrase)
+    if issue.category == "citation_error":
+        phrases.extend(
+            match.group("text").strip()
+            for match in CITATION_EXPLAINED_CLAIM.finditer(issue.description)
+        )
+    return list(dict.fromkeys(item for item in phrases if len(_normalize_issue_locator(item)) >= 6))
+
+
+def _issue_acknowledges_phrase_support(issue: ReviewIssue) -> bool:
+    """Detect a Red issue whose own rationale says the quoted Claim is supported."""
+
+    phrases = _issue_claim_phrases(issue)
+    clauses = [
+        match.group("text").strip()
+        for match in ACKNOWLEDGED_EVIDENCE_CLAUSE.finditer(issue.description)
+    ]
+    for phrase in phrases:
+        phrase_key = _normalize_issue_locator(phrase)
+        for clause in clauses:
+            clause_key = _normalize_issue_locator(clause)
+            if min(len(phrase_key), len(clause_key)) < 8:
+                continue
+            if SequenceMatcher(None, phrase_key, clause_key).ratio() >= 0.82:
+                return True
+    return False
+
+
+def _section_item_targets(report: str, locator: str) -> list[tuple[str, str]]:
+    """Resolve locators such as ``“三、风险”第 2 条`` to exact report lines."""
+
+    lines = report.splitlines()
+    headings: list[tuple[int, int, str]] = []
+    for index, line in enumerate(lines):
+        heading = MARKDOWN_HEADING.match(line)
+        if heading:
+            level = len(line) - len(line.lstrip("#"))
+            headings.append((index, level, heading.group(1).strip()))
+
+    resolved: list[tuple[str, str]] = []
+    for match in SECTION_ITEM_LOCATOR.finditer(locator):
+        section = (match.group("quoted") or match.group("plain") or "").strip()
+        item = match.group("item")
+        section_key = _normalize_issue_locator(section)
+        for heading_index, level, heading_text in headings:
+            heading_key = _normalize_issue_locator(heading_text)
+            if not section_key or not (
+                section_key == heading_key
+                or section_key in heading_key
+                or heading_key in section_key
+            ):
+                continue
+            end = len(lines)
+            for next_index, next_level, _ in headings:
+                if next_index > heading_index and next_level <= level:
+                    end = next_index
+                    break
+            item_pattern = re.compile(rf"^\s*{re.escape(item)}[.)、]\s+")
+            candidates = [
+                line.strip() for line in lines[heading_index + 1 : end] if item_pattern.match(line)
+            ]
+            if len(candidates) == 1 and report.count(candidates[0]) == 1:
+                resolved.append((candidates[0], heading_text))
+            break
+    return list(dict.fromkeys(resolved))
+
+
+def _resolve_review_issue_targets(
+    report: str,
+    issue: ReviewIssue,
+    valid_ids: set[str],
+) -> list[tuple[str, str]]:
+    """Map exact prose or semantic Red locators to unique Claim source spans.
+
+    The resolver deliberately requires either an exact target, an explicitly
+    quoted problematic Claim, or a numbered section locator. It never edits a
+    report from a vague section name alone.
+    """
+
+    records = extract_claims(report, min_chars=6)
+    resolved: list[tuple[str, str]] = []
+
+    def add(target: str, section: str = "") -> None:
+        target = target.strip()
+        if not target or report.count(target) != 1:
+            return
+        for index, (existing_target, existing_section) in enumerate(resolved):
+            if existing_target != target:
+                continue
+            if section and not existing_section:
+                resolved[index] = (target, section)
+            return
+        resolved.append((target, section))
+
+    raw_target = str(issue.target or "").strip()
+    exact_cited = _resolve_cited_delete_target(report, raw_target, valid_ids)
+    if exact_cited:
+        add(exact_cited[0])
+    raw_key = _normalize_issue_locator(raw_target)
+    if raw_key:
+        for record in records:
+            if raw_key == _normalize_issue_locator(record.source_text):
+                add(record.source_text, record.section)
+
+    phrases = _issue_claim_phrases(issue)
+    for phrase in phrases:
+        phrase_key = _normalize_issue_locator(phrase)
+        for record in records:
+            claim_key = _normalize_issue_locator(record.text)
+            source_key = _normalize_issue_locator(record.source_text)
+            if min(len(phrase_key), len(claim_key)) < 6:
+                continue
+            if phrase_key not in claim_key and phrase_key not in source_key:
+                continue
+            source = record.source_text.strip()
+            # Never delete a correction merely because it quotes the rejected
+            # assertion (for example, "不能据此推断……").
+            if any(
+                marker in source
+                for marker in ("不能据此推断", "不能推断", "并非", "不代表", "不等于", "无法确认")
+            ):
+                continue
+            add(source, record.section)
+
+    # Section/item fallback is reserved for citation mismatch descriptions.
+    # Other categories need explicit problematic prose to avoid deleting an
+    # already-corrected item referenced by a stale Red locator.
+    if not resolved and issue.category == "citation_error":
+        for target, section in _section_item_targets(report, raw_target):
+            add(target, section)
+    return resolved
+
+
+def _scoped_red_repair(
+    target: str,
+    issue: ReviewIssue,
+    valid_ids: set[str],
+) -> tuple[RepairAction, str, list[str]]:
+    """Remove a quoted bad clause while preserving independent sibling prose."""
+
+    phrases = sorted(_issue_claim_phrases(issue), key=len, reverse=True)
+    bad_evidence_ids = set(EVIDENCE_ID_TEXT.findall(issue.description)) & valid_ids
+    for phrase in phrases:
+        if target.count(phrase) == 1:
+            phrase_start = target.index(phrase)
+            phrase_end = phrase_start + len(phrase)
+        else:
+            # Red often omits inline-code backticks around field names. Keep a
+            # raw-index map so the deterministic edit still uses exact bytes.
+            simplified_target = ""
+            raw_indices: list[int] = []
+            for raw_index, character in enumerate(target):
+                if character == "`":
+                    continue
+                simplified_target += character
+                raw_indices.append(raw_index)
+            simplified_phrase = phrase.replace("`", "")
+            if simplified_target.count(simplified_phrase) != 1:
+                continue
+            simple_start = simplified_target.index(simplified_phrase)
+            simple_end = simple_start + len(simplified_phrase)
+            phrase_start = raw_indices[simple_start]
+            phrase_end = raw_indices[simple_end - 1] + 1
+        prefix_semantic = target[:phrase_start]
+        prefix_semantic = LIST_PREFIX.sub("", prefix_semantic).strip()
+        prefix_semantic = re.sub(r"^\*\*[^*]{1,100}\*\*[：:]?\s*", "", prefix_semantic).strip()
+        replacement = target[:phrase_start] + target[phrase_end:]
+        # A citation immediately following a leading bad clause belongs to
+        # that clause. For a trailing clause, preserve shared citations that
+        # may still support the independent prefix.
+        if not prefix_semantic:
+            for evidence_id in bad_evidence_ids:
+                replacement = replacement.replace(f"[{evidence_id}]", "")
+        else:
+            remaining_ids = set(CITATION_PATTERN.findall(replacement)) & valid_ids
+            if remaining_ids - bad_evidence_ids:
+                for evidence_id in bad_evidence_ids:
+                    replacement = replacement.replace(f"[{evidence_id}]", "")
+        replacement = re.sub(
+            r"(\*\*)\s*[，,；;]\s*(?:并(?:且)?|同时|而且)?\s*",
+            r"\1 ",
+            replacement,
+        )
+        replacement = re.sub(r"^\s*([；;，,])\s*", "", replacement)
+        replacement = re.sub(r"^\s*(?:并(?:且)?|同时|而且)\s*", "", replacement)
+        replacement = re.sub(r"[；;，,]\s*[；;，,]", "；", replacement)
+        replacement = re.sub(r"[；;，,]+\s*([。.!?])", r"\1", replacement)
+        replacement = re.sub(r"^(在[^。；]{1,40}方面)[；;]\s*", r"\1，", replacement)
+        replacement = re.sub(r"\s+([，,。；;！？!?])", r"\1", replacement)
+        replacement = re.sub(
+            r"[；;，,]\s*((?:\[[A-Za-z0-9_-]+-E\d+\]\s*)*[。.!?]?)$",
+            r" \1",
+            replacement,
+        )
+        replacement = re.sub(r"[ \t]{2,}", " ", replacement).strip()
+        semantic = CITATION_PATTERN.sub("", replacement)
+        semantic = LIST_PREFIX.sub("", semantic).strip()
+        semantic = re.sub(r"^\*\*[^*]{1,100}\*\*[：:]?\s*", "", semantic).strip()
+        semantic_key = _normalize_issue_locator(semantic)
+        if len(semantic_key) < 6 or re.fullmatch(
+            r"(?:这意味着|因此|由此可见|从而).{0,12}", semantic_key
+        ):
+            return RepairAction.DELETE, "", []
+        remaining_ids = sorted(set(CITATION_PATTERN.findall(replacement)) & valid_ids)
+        return RepairAction.MODIFY, replacement, remaining_ids
+    cited_ids = sorted(set(CITATION_PATTERN.findall(target)) & valid_ids)
+    return RepairAction.DELETE, "", cited_ids
 
 
 def _cross_sdk_mismatch_ids(
@@ -640,16 +892,24 @@ class BlueTeamRepairer:
         patches: list[ReportPatch] = []
         rejected: list[PatchRejection] = []
         handled_targets: set[str] = set()
+        claims_by_target: dict[str, list] = {}
+        for ledger_claim in ledger.claims:
+            target = ledger_claim.source_text.strip()
+            if target:
+                claims_by_target.setdefault(target, []).append(ledger_claim)
         for claim in ledger.claims:
             if len(patches) >= self.max_patches:
                 break
-            if claim.verdict in {
-                SupportVerdict.SUPPORTED,
-                SupportVerdict.NOT_APPLICABLE,
-            }:
-                continue
             target = claim.source_text.strip()
             if not target or target in handled_targets:
+                continue
+            claim_group = claims_by_target.get(target, [claim])
+            actionable_claims = [
+                item
+                for item in claim_group
+                if item.verdict not in {SupportVerdict.SUPPORTED, SupportVerdict.NOT_APPLICABLE}
+            ]
+            if not actionable_claims:
                 continue
             if report.count(target) != 1:
                 rejected.append(
@@ -660,6 +920,118 @@ class BlueTeamRepairer:
                 )
                 continue
             handled_targets.add(target)
+
+            # A compound source sentence can produce multiple atomic Claims.
+            # Repair it once as a group so that deleting one bad qualifier
+            # never deletes an independently supported sibling assertion.
+            if len(claim_group) > 1:
+                preserved_fragments: list[str] = []
+                preserved_evidence_ids: list[str] = []
+                conflict_types: set[str] = set()
+                for atomic_claim in claim_group:
+                    conflict_types.update(
+                        conflict for link in atomic_claim.links for conflict in link.conflict_types
+                    )
+                    if atomic_claim.verdict is SupportVerdict.SUPPORTED:
+                        preserved_fragments.append(atomic_claim.text)
+                        preserved_evidence_ids.extend(
+                            link.evidence_id
+                            for link in atomic_claim.links
+                            if link.cited and link.verdict is SupportVerdict.SUPPORTED
+                        )
+                        continue
+                    supported_candidates = [
+                        link
+                        for link in atomic_claim.links
+                        if not link.cited and link.verdict is SupportVerdict.SUPPORTED
+                    ]
+                    if (
+                        atomic_claim.verdict is not SupportVerdict.CONTRADICTED
+                        and supported_candidates
+                    ):
+                        preserved_fragments.append(atomic_claim.text)
+                        preserved_evidence_ids.extend(
+                            link.evidence_id for link in supported_candidates[:2]
+                        )
+                        continue
+                    partial_links = [
+                        link
+                        for link in atomic_claim.links
+                        if link.verdict is SupportVerdict.PARTIALLY_SUPPORTED
+                    ]
+                    supported_aspects = list(
+                        dict.fromkeys(
+                            aspect.strip()
+                            for link in partial_links
+                            for aspect in link.supported_aspects
+                            if aspect.strip()
+                        )
+                    )
+                    if supported_aspects:
+                        preserved_fragments.extend(supported_aspects[:3])
+                        preserved_evidence_ids.extend(
+                            link.evidence_id for link in partial_links[:2]
+                        )
+
+                patch_id = f"AUTO-claim-{claim.parent_claim_id or claim.claim_id}"
+                if preserved_fragments:
+                    replacement = "；".join(
+                        fragment.strip(" -*#\t。；; ")
+                        for fragment in dict.fromkeys(preserved_fragments)
+                        if fragment.strip(" -*#\t。；; ")
+                    )
+                    if replacement and not replacement.endswith(("。", "！", "？", ".", "!", "?")):
+                        replacement += "。"
+                    evidence_ids = list(dict.fromkeys(preserved_evidence_ids))[:4]
+                    if evidence_ids:
+                        replacement += " " + " ".join(f"[{item}]" for item in evidence_ids)
+                    replacement = _preserve_list_prefix(target, replacement)
+                    patches.append(
+                        ReportPatch(
+                            patch_id=patch_id,
+                            action=RepairAction.MODIFY,
+                            target=target,
+                            replacement=replacement,
+                            evidence_ids=evidence_ids,
+                            reason=(
+                                "复合 Claim 已原子化；程序保留获得完整或部分支持的子断言，"
+                                "移除未支持或冲突的限定"
+                            ),
+                        )
+                    )
+                elif all(item.verdict is SupportVerdict.CONTRADICTED for item in actionable_claims):
+                    detail = ",".join(sorted(conflict_types)) or "semantic"
+                    patches.append(
+                        ReportPatch(
+                            patch_id=patch_id,
+                            action=RepairAction.DELETE,
+                            target=target,
+                            replacement="",
+                            evidence_ids=[],
+                            reason=f"复合 Claim 的全部子断言均与证据冲突（{detail}），程序删除",
+                        )
+                    )
+                else:
+                    topics = "；".join(
+                        item.text.strip(" -*#\t。；; ") for item in actionable_claims[:3]
+                    )
+                    replacement = _preserve_list_prefix(
+                        target,
+                        f"基于当前证据，以下内容无法确认，已降级为待验证问题：“{topics}”",
+                    )
+                    patches.append(
+                        ReportPatch(
+                            patch_id=patch_id,
+                            action=RepairAction.MODIFY,
+                            target=target,
+                            replacement=replacement,
+                            evidence_ids=[],
+                            reason="复合 Claim 无可保留子断言，程序降级为证据缺口",
+                        )
+                    )
+                continue
+
+            claim = actionable_claims[0]
             supported_candidates = [
                 link
                 for link in claim.links
@@ -793,18 +1165,10 @@ class BlueTeamRepairer:
                 evidences,
             )
 
-        deterministic_inference = self._apply_deterministic_inference_deletes(
-            PatchApplicationResult(report=report), review, evidences
-        )
-        if deterministic_inference.changed:
-            return deterministic_inference
-
         if self.llm is None:
-            result = self._apply_deterministic_factual_deletes(
+            result = await self._apply_deterministic_fallbacks(
                 PatchApplicationResult(report=report), review, evidences
             )
-            result = await self._repair_unknown_citations(result, review, evidences)
-            result = self._ensure_uncertainty_disclosure(result, review, evidences)
             result.rejected.append(PatchRejection("generation", "blue_llm_unavailable"))
             return result
 
@@ -866,7 +1230,7 @@ Red issues：{json.dumps(issue_payload, ensure_ascii=False)}
         try:
             payload = parse_json_payload(await call_llm(self.llm, prompt))
         except Exception as exc:
-            return PatchApplicationResult(
+            result = PatchApplicationResult(
                 report=report,
                 rejected=[
                     PatchRejection(
@@ -875,13 +1239,15 @@ Red issues：{json.dumps(issue_payload, ensure_ascii=False)}
                     )
                 ],
             )
+            return await self._apply_deterministic_fallbacks(result, review, evidences)
 
         rows = payload.get("patches") if isinstance(payload, dict) else payload
         if not isinstance(rows, list):
-            return PatchApplicationResult(
+            result = PatchApplicationResult(
                 report=report,
                 rejected=[PatchRejection("generation", "patches_must_be_a_list")],
             )
+            return await self._apply_deterministic_fallbacks(result, review, evidences)
 
         parsed: list[ReportPatch] = []
         rejected: list[PatchRejection] = []
@@ -959,10 +1325,80 @@ Red issues：{json.dumps(issue_payload, ensure_ascii=False)}
                 **retry.validation_ledgers,
             }
             return retry
+        return await self._apply_deterministic_fallbacks(result, review, evidences)
+
+    async def _apply_deterministic_fallbacks(
+        self,
+        result: PatchApplicationResult,
+        review: ReviewResult,
+        evidences: Sequence[Evidence],
+    ) -> PatchApplicationResult:
+        """Run closed, non-generative repairs after structured Blue fails or is absent."""
+
+        result = await self._apply_verified_explicit_relinks(result, review, evidences)
         result = self._apply_deterministic_factual_deletes(result, review, evidences)
         result = self._apply_deterministic_inference_deletes(result, review, evidences)
+        result = self._apply_deterministic_citation_repairs(result, review, evidences)
         result = await self._repair_unknown_citations(result, review, evidences)
         return self._ensure_uncertainty_disclosure(result, review, evidences)
+
+    async def _apply_verified_explicit_relinks(
+        self,
+        result: PatchApplicationResult,
+        review: ReviewResult,
+        evidences: Sequence[Evidence],
+    ) -> PatchApplicationResult:
+        """Relink a Claim only when Red names a direct-support evidence item."""
+
+        valid_ids = {item.evidence_id for item in evidences}
+        for issue in review.structured_issues:
+            if issue.severity <= 1 or issue.category not in {"factual_error", "citation_error"}:
+                continue
+            support_match = EXPLICIT_SUPPORT_EVIDENCE.search(issue.description)
+            if not support_match:
+                continue
+            support_id = support_match.group("evidence_id")
+            if support_id not in valid_ids:
+                continue
+            targets = _resolve_review_issue_targets(result.report, issue, valid_ids)
+            for index, (target, _) in enumerate(targets, start=1):
+                cited_ids = set(CITATION_PATTERN.findall(target)) & valid_ids
+                described_ids = set(EVIDENCE_ID_TEXT.findall(issue.description)) & valid_ids
+                mismatched_ids = (cited_ids & described_ids) - {support_id}
+                if not mismatched_ids:
+                    continue
+                replacement = target
+                for evidence_id in sorted(mismatched_ids):
+                    replacement = replacement.replace(f"[{evidence_id}]", f"[{support_id}]")
+                replacement = re.sub(
+                    rf"(?:\s*\[{re.escape(support_id)}\]){{2,}}",
+                    f" [{support_id}]",
+                    replacement,
+                )
+                suffix = f"-{index}" if len(targets) > 1 else ""
+                patch = ReportPatch(
+                    patch_id=f"AUTO-citation-relink-{issue.issue_id}{suffix}",
+                    action=RepairAction.MODIFY,
+                    target=target,
+                    replacement=replacement,
+                    evidence_ids=sorted(set(CITATION_PATTERN.findall(replacement))),
+                    issue_ids=[issue.issue_id],
+                    reason=(
+                        "Red 明确给出直接支持证据；程序生成引用替换补丁并经"
+                        " Claim–Evidence Verifier 验证后应用"
+                    ),
+                )
+                validated, rejected, ledgers = await self.verifier.validate_patches(
+                    [patch], evidences
+                )
+                result.rejected.extend(rejected)
+                result.validation_ledgers.update(ledgers)
+                deterministic = self.apply_patches(result.report, validated, evidences)
+                result.report = deterministic.report
+                result.requested_count += deterministic.requested_count
+                result.applied.extend(deterministic.applied)
+                result.rejected.extend(deterministic.rejected)
+        return result
 
     async def _repair_unknown_citations(
         self,
@@ -1029,50 +1465,47 @@ Red issues：{json.dumps(issue_payload, ensure_ascii=False)}
         review: ReviewResult,
         evidences: Sequence[Evidence],
     ) -> PatchApplicationResult:
-        """Delete exact prose that Red classified as material inference overreach."""
+        """Delete uniquely resolved prose classified as material inference overreach."""
 
         valid_ids = {item.evidence_id for item in evidences}
+        resolved_issue_ids = {issue_id for patch in result.applied for issue_id in patch.issue_ids}
         handled: set[str] = set()
         for issue in review.structured_issues:
             if (
-                issue.category != "inference_overreach"
+                issue.issue_id in resolved_issue_ids
+                or issue.category != "inference_overreach"
                 or issue.severity <= 1
-                or issue.action not in {RepairAction.DELETE, RepairAction.MODIFY}
+                or issue.action
+                not in {RepairAction.DELETE, RepairAction.MODIFY, RepairAction.VERIFY}
+                or not UNSUPPORTED_DELETE_REASON.search(issue.description)
+                or _issue_acknowledges_phrase_support(issue)
             ):
                 continue
-            raw_target = str(issue.target or "").strip()
-            if not raw_target:
-                continue
-            exact = [
-                line.strip() for line in result.report.splitlines() if line.strip() == raw_target
-            ]
-            target = exact[0] if len(exact) == 1 else ""
-            if not target:
-                containing = [
-                    line.strip()
-                    for line in result.report.splitlines()
-                    if raw_target in line and line.strip()
-                ]
-                if len(containing) == 1:
-                    target = containing[0]
-            if not target or target in handled or result.report.count(target) != 1:
-                continue
-            cited_ids = sorted(set(CITATION_PATTERN.findall(target)) & valid_ids)
-            patch = ReportPatch(
-                patch_id=f"AUTO-inference-delete-{issue.issue_id}",
-                action=RepairAction.DELETE,
-                target=target,
-                replacement="",
-                evidence_ids=cited_ids,
-                issue_ids=[issue.issue_id],
-                reason="Red 已确认推断越界且现有证据不支持，程序删除精确陈述",
-            )
-            deterministic = self.apply_patches(result.report, [patch], evidences)
-            result.report = deterministic.report
-            result.requested_count += deterministic.requested_count
-            result.applied.extend(deterministic.applied)
-            result.rejected.extend(deterministic.rejected)
-            handled.add(target)
+            targets = _resolve_review_issue_targets(result.report, issue, valid_ids)
+            for index, (target, _) in enumerate(targets, start=1):
+                if target in handled or result.report.count(target) != 1:
+                    continue
+                action, replacement, cited_ids = _scoped_red_repair(target, issue, valid_ids)
+                suffix = f"-{index}" if len(targets) > 1 else ""
+                patch_kind = "modify" if action is RepairAction.MODIFY else "delete"
+                patch = ReportPatch(
+                    patch_id=f"AUTO-inference-{patch_kind}-{issue.issue_id}{suffix}",
+                    action=action,
+                    target=target,
+                    replacement=replacement,
+                    evidence_ids=cited_ids,
+                    issue_ids=[issue.issue_id],
+                    reason=(
+                        "Red 已确认推断越界且现有证据不支持；程序通过逐字 Claim、"
+                        "引述或章节条目定位后移除越界部分"
+                    ),
+                )
+                deterministic = self.apply_patches(result.report, [patch], evidences)
+                result.report = deterministic.report
+                result.requested_count += deterministic.requested_count
+                result.applied.extend(deterministic.applied)
+                result.rejected.extend(deterministic.rejected)
+                handled.add(target)
         return result
 
     def _apply_deterministic_factual_deletes(
@@ -1084,40 +1517,107 @@ Red issues：{json.dumps(issue_payload, ensure_ascii=False)}
         """Delete exact cited claims that Red marked as severe factual errors."""
 
         valid_ids = {item.evidence_id for item in evidences}
+        resolved_issue_ids = {issue_id for patch in result.applied for issue_id in patch.issue_ids}
         handled_targets: set[str] = set()
         for issue in review.structured_issues:
-            raw_target = (issue.target or "").strip()
-            resolved = _resolve_cited_delete_target(result.report, raw_target, valid_ids)
-            target, cited_ids = resolved or ("", set())
             eligible = (
-                issue.action in {RepairAction.DELETE, RepairAction.MODIFY}
+                issue.issue_id not in resolved_issue_ids
+                and issue.action in {RepairAction.DELETE, RepairAction.MODIFY}
                 and issue.severity >= 3
                 and issue.dimension.casefold() == "factuality"
-                and bool(target)
-                and target not in handled_targets
+                and issue.category in {"factual_error", "unknown"}
                 and bool(UNSUPPORTED_DELETE_REASON.search(issue.description))
-                and result.report.count(target) == 1
             )
             if not eligible:
                 continue
-            handled_targets.add(target)
-            patch = ReportPatch(
-                patch_id=f"AUTO-factual-delete-{issue.issue_id}",
-                action=RepairAction.DELETE,
-                target=target,
-                replacement="",
-                evidence_ids=list(sorted(cited_ids)),
-                issue_ids=[issue.issue_id],
-                reason=(
-                    "模型 DELETE/MODIFY 未消除问题后，程序删除 Red 标记为"
-                    "高严重度且与已引证证据冲突的精确陈述"
-                ),
-            )
-            deterministic = self.apply_patches(result.report, [patch], evidences)
-            result.report = deterministic.report
-            result.requested_count += deterministic.requested_count
-            result.applied.extend(deterministic.applied)
-            result.rejected.extend(deterministic.rejected)
+            targets = _resolve_review_issue_targets(result.report, issue, valid_ids)
+            for index, (target, _) in enumerate(targets, start=1):
+                if target in handled_targets or result.report.count(target) != 1:
+                    continue
+                if not (set(CITATION_PATTERN.findall(target)) & valid_ids):
+                    continue
+                handled_targets.add(target)
+                action, replacement, cited_ids = _scoped_red_repair(target, issue, valid_ids)
+                suffix = f"-{index}" if len(targets) > 1 else ""
+                patch_kind = "modify" if action is RepairAction.MODIFY else "delete"
+                patch = ReportPatch(
+                    patch_id=f"AUTO-factual-{patch_kind}-{issue.issue_id}{suffix}",
+                    action=action,
+                    target=target,
+                    replacement=replacement,
+                    evidence_ids=cited_ids,
+                    issue_ids=[issue.issue_id],
+                    reason=(
+                        "模型 DELETE/MODIFY 未消除问题后，程序移除 Red 标记为"
+                        "高严重度且与已引证证据冲突的唯一 Claim 部分"
+                    ),
+                )
+                deterministic = self.apply_patches(result.report, [patch], evidences)
+                result.report = deterministic.report
+                result.requested_count += deterministic.requested_count
+                result.applied.extend(deterministic.applied)
+                result.rejected.extend(deterministic.rejected)
+        return result
+
+    def _apply_deterministic_citation_repairs(
+        self,
+        result: PatchApplicationResult,
+        review: ReviewResult,
+        evidences: Sequence[Evidence],
+    ) -> PatchApplicationResult:
+        """Remove mismatched claims, or unlink decorative citations in advice."""
+
+        valid_ids = {item.evidence_id for item in evidences}
+        resolved_issue_ids = {issue_id for patch in result.applied for issue_id in patch.issue_ids}
+        handled_targets: set[str] = set()
+        for issue in review.structured_issues:
+            if (
+                issue.issue_id in resolved_issue_ids
+                or issue.category != "citation_error"
+                or issue.severity <= 1
+                or issue.action
+                not in {RepairAction.DELETE, RepairAction.MODIFY, RepairAction.VERIFY}
+                or not UNSUPPORTED_DELETE_REASON.search(issue.description)
+            ):
+                continue
+            targets = _resolve_review_issue_targets(result.report, issue, valid_ids)
+            for index, (target, section) in enumerate(targets, start=1):
+                if target in handled_targets or result.report.count(target) != 1:
+                    continue
+                handled_targets.add(target)
+                cited_ids = sorted(set(CITATION_PATTERN.findall(target)) & valid_ids)
+                is_guidance = "建议" in section or is_action_guidance(target)
+                replacement = ""
+                action = RepairAction.DELETE
+                patch_kind = "delete"
+                declared_ids: list[str] = []
+                reason = "引用与 Claim 不匹配，程序删除唯一定位的事实陈述"
+                if is_guidance and cited_ids:
+                    replacement = CITATION_PATTERN.sub("", target)
+                    replacement = re.sub(r"\s+([，,。；;！？!?])", r"\1", replacement)
+                    replacement = re.sub(r"[ \t]{2,}", " ", replacement).strip()
+                    action = RepairAction.MODIFY
+                    patch_kind = "unlink"
+                    reason = "建议文本无需装饰性引用，程序保留操作建议并移除错配引用"
+                else:
+                    action, replacement, declared_ids = _scoped_red_repair(target, issue, valid_ids)
+                    patch_kind = "modify" if action is RepairAction.MODIFY else "delete"
+                    reason = "引用与 Claim 不匹配，程序移除错配断言并保留独立子断言"
+                suffix = f"-{index}" if len(targets) > 1 else ""
+                patch = ReportPatch(
+                    patch_id=f"AUTO-citation-{patch_kind}-{issue.issue_id}{suffix}",
+                    action=action,
+                    target=target,
+                    replacement=replacement,
+                    evidence_ids=declared_ids,
+                    issue_ids=[issue.issue_id],
+                    reason=reason,
+                )
+                deterministic = self.apply_patches(result.report, [patch], evidences)
+                result.report = deterministic.report
+                result.requested_count += deterministic.requested_count
+                result.applied.extend(deterministic.applied)
+                result.rejected.extend(deterministic.rejected)
         return result
 
     def _ensure_uncertainty_disclosure(

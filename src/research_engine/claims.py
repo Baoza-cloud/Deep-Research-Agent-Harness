@@ -8,6 +8,7 @@ import copy
 import re
 from typing import Sequence
 
+from .fact_checks import check_critical_qualifiers, find_report_count_conflicts
 from .parsing import parse_json_payload
 from .planner import LLMCallable, call_llm
 from .schemas import (
@@ -24,8 +25,9 @@ from .schemas import (
 
 CITATION_PATTERN = re.compile(r"\[([A-Za-z0-9_-]+-E\d+)\]")
 CLAIM_SPLIT = re.compile(
-    r"(?<=[。！？!?])(?!\s*\[[A-Za-z0-9_-]+-E\d+\])\s*"
-    r"|(?<=\.)(?!\s*\[[A-Za-z0-9_-]+-E\d+\])\s+"
+    r"(?<=[。！？!?])(?!\s*(?:\[[A-Za-z0-9_-]+-E\d+\]|\*\*))\s*"
+    r"|(?<=\.)(?!\s*(?:\[[A-Za-z0-9_-]+-E\d+\]|\*\*))\s+"
+    r"|(?<=\*\*)\s+(?!\[[A-Za-z0-9_-]+-E\d+\])"
     r"|(?<=\])\s+(?!\[[A-Za-z0-9_-]+-E\d+\])"
     r"|\n+"
 )
@@ -87,6 +89,12 @@ EVIDENCE_ABSENCE_PATTERN = re.compile(
     r"^(?:\d+[.)、]\s*)?(?:(?:现有|当前|本次|上述)证据|证据)"
     r".{0,60}(?:未提供|未说明|未涉及|未覆盖|无法确认|不足以支持)"
 )
+MARKDOWN_INLINE_LABEL = re.compile(r"^\*\*[^*]{1,80}\*\*[：:]?\s*")
+ATOMIC_BOUNDARY = re.compile(
+    r"\s*(?:[；;]|，\s*(?:并且|而且|同时|此外|但(?:是)?|而)\s*|"
+    r",\s*(?:and|but|while|whereas|however)\s+)\s*",
+    re.IGNORECASE,
+)
 
 
 def _tokens(text: str) -> set[str]:
@@ -139,6 +147,24 @@ def _claim_reuse_key(claim: ClaimRecord) -> str:
     return f"{normalized}\x1e{citations}"
 
 
+def _atomic_fragments(text: str, *, min_chars: int) -> list[str]:
+    """Split explicit coordinated assertions without splitting enumerations."""
+
+    fragments = [item.strip() for item in ATOMIC_BOUNDARY.split(text) if item.strip()]
+    if len(fragments) <= 1:
+        return [text]
+    merged: list[str] = []
+    for fragment in fragments:
+        if len(fragment) < min_chars and merged:
+            merged[-1] = f"{merged[-1]}；{fragment}"
+        else:
+            merged.append(fragment)
+    if len(merged) > 1 and len(merged[0]) < min_chars:
+        merged[1] = f"{merged[0]}；{merged[1]}"
+        merged.pop(0)
+    return merged or [text]
+
+
 def extract_claims(
     report: str,
     *,
@@ -152,6 +178,7 @@ def extract_claims(
     section = ""
     skip_section = False
     lines = report.splitlines()
+    parent_index = 0
     for index, line in enumerate(lines):
         heading = MARKDOWN_HEADING.match(line)
         if heading:
@@ -179,19 +206,36 @@ def extract_claims(
                 continue
             citations = CITATION_PATTERN.findall(cleaned)
             text = CITATION_PATTERN.sub("", cleaned).strip()
+            text = MARKDOWN_INLINE_LABEL.sub("", text).strip()
             if len(text) < min_chars:
                 continue
-            claims.append(
-                ClaimRecord(
-                    claim_id=f"{id_prefix}{len(claims) + 1}",
-                    text=text,
-                    section=section,
-                    source_text=raw,
-                    line_number=index + 1,
-                    sentence_index=sentence_index,
-                    citations=list(dict.fromkeys(citations)),
-                )
+            parent_index += 1
+            parent_claim_id = f"{id_prefix}{parent_index}"
+            non_assertive = bool(
+                DETERMINISTIC_WEAKENING_PATTERN.search(text)
+                or EVIDENCE_GAP_PATTERN.search(text)
+                or is_action_guidance(text)
+                or is_evidence_gap_disclosure(text)
             )
+            fragments = [text] if non_assertive else _atomic_fragments(text, min_chars=min_chars)
+            for atomic_index, fragment in enumerate(fragments, start=1):
+                claim_id = (
+                    parent_claim_id if len(fragments) == 1 else f"{parent_claim_id}.{atomic_index}"
+                )
+                claims.append(
+                    ClaimRecord(
+                        claim_id=claim_id,
+                        text=fragment,
+                        section=section,
+                        source_text=raw,
+                        line_number=index + 1,
+                        sentence_index=sentence_index,
+                        citations=list(dict.fromkeys(citations)),
+                        parent_claim_id=parent_claim_id,
+                        atomic_index=atomic_index,
+                        atomic_count=len(fragments),
+                    )
+                )
     return claims
 
 
@@ -220,6 +264,10 @@ def _ledger_metrics(claims: Sequence[ClaimRecord]) -> dict[str, float]:
     )
     return {
         "claim_count": float(len(claims)),
+        "atomic_claim_count": float(len(claims)),
+        "compound_source_count": float(
+            len({item.parent_claim_id for item in claims if item.atomic_count > 1})
+        ),
         "reviewable_claim_count": float(len(reviewable)),
         "supported_claim_count": float(supported),
         "partially_supported_claim_count": float(partial),
@@ -229,6 +277,8 @@ def _ledger_metrics(claims: Sequence[ClaimRecord]) -> dict[str, float]:
         "unknown_claim_count": float(unknown),
         "unsupported_claim_count": float(len(reviewable) - supported),
         "claim_support_rate": supported / len(reviewable) if reviewable else 1.0,
+        "full_support_rate": supported / len(reviewable) if reviewable else 1.0,
+        "partial_support_rate": partial / len(reviewable) if reviewable else 0.0,
         "citation_correctness": (supported_links / len(citation_links) if citation_links else 0.0),
         "aligned_uncited_support_count": float(supported_candidates),
         "time_conflict_count": float(conflict_counts["time"]),
@@ -285,6 +335,7 @@ class ClaimEvidenceVerifier:
         link.conflict_types = list(judgment.get("conflict_types", []))
         link.supported_aspects = list(judgment.get("supported_aspects", []))
         link.unsupported_aspects = list(judgment.get("unsupported_aspects", []))
+        link.verification_method = "semantic_cache"
 
     async def build_ledger(
         self,
@@ -309,6 +360,8 @@ class ClaimEvidenceVerifier:
         semantic_cache_hits = 0
         semantic_cache_misses = 0
         reused_claim_count = 0
+        deterministic_override_count = 0
+        report_internal_count_conflict_count = 0
         pair_cache_keys: dict[str, str] = {}
         previous_claims = {
             _claim_reuse_key(item): item
@@ -321,8 +374,18 @@ class ClaimEvidenceVerifier:
                 claim.confidence = 1.0
                 continue
             previous_claim = previous_claims.get(_claim_reuse_key(claim))
+            previous_mode_safe = self.llm is None or (
+                previous_ledger is not None and previous_ledger.verification_mode == "semantic"
+            )
+            previous_links_safe = self.llm is None or all(
+                link.verification_method.startswith(("semantic", "deterministic"))
+                for link in (previous_claim.links if previous_claim else [])
+                if link.cited
+            )
             if (
                 previous_claim is not None
+                and previous_mode_safe
+                and previous_links_safe
                 and previous_claim.verdict
                 in {SupportVerdict.SUPPORTED, SupportVerdict.NOT_APPLICABLE}
                 and all(link.evidence_id in evidence_map for link in previous_claim.links)
@@ -378,6 +441,7 @@ class ClaimEvidenceVerifier:
                         0.0,
                         "citation_id_not_found",
                         cited=cited,
+                        verification_method="missing",
                     )
                 else:
                     verifiable_pair_count += 1
@@ -387,17 +451,16 @@ class ClaimEvidenceVerifier:
                     overlap = (
                         len(claim_tokens & evidence_tokens) / denominator if denominator else 0.0
                     )
-                    verdict = (
-                        SupportVerdict.SUPPORTED
-                        if overlap >= self.lexical_threshold
-                        else SupportVerdict.INSUFFICIENT
-                    )
+                    verdict = SupportVerdict.INSUFFICIENT
+                    if self.llm is None and overlap >= self.lexical_threshold:
+                        verdict = SupportVerdict.SUPPORTED
                     link = ClaimEvidenceLink(
                         evidence_id,
                         verdict,
                         min(1.0, overlap),
                         f"lexical_overlap={overlap:.3f}",
                         cited=cited,
+                        verification_method=("rules" if self.llm is None else "pending_semantic"),
                     )
                     pair_id = f"{claim.claim_id}::{evidence_id}"
                     cache_key = self._semantic_cache_key(claim.text, evidence)
@@ -477,6 +540,7 @@ conflict_types 只填写 TIME、NUMBER、ENTITY 中实际存在的类型，没�
                     judged_link.verdict = verdict
                     judged_link.confidence = confidence
                     judged_link.rationale = str(item.get("rationale", ""))[:500]
+                    judged_link.verification_method = "semantic"
                     raw_conflicts = item.get("conflict_types", [])
                     if isinstance(raw_conflicts, list):
                         judged_link.conflict_types = [
@@ -513,6 +577,78 @@ conflict_types 只填写 TIME、NUMBER、ENTITY 中实际存在的类型，没�
                     mode = "semantic_partial"
             except Exception:
                 mode = "lexical_fallback"
+
+        for claim in claims:
+            for link in claim.links:
+                evidence = evidence_map.get(link.evidence_id)
+                if evidence is None:
+                    continue
+                check = check_critical_qualifiers(claim.text, evidence.content)
+                if check.verdict is None:
+                    continue
+                original_verdict = link.verdict
+                if check.verdict is SupportVerdict.CONTRADICTED:
+                    link.verdict = SupportVerdict.CONTRADICTED
+                    link.confidence = max(link.confidence, 0.99)
+                elif link.verdict in {
+                    SupportVerdict.SUPPORTED,
+                    SupportVerdict.PARTIALLY_SUPPORTED,
+                    SupportVerdict.INSUFFICIENT,
+                }:
+                    link.verdict = SupportVerdict.PARTIALLY_SUPPORTED
+                    link.confidence = max(link.confidence, 0.85)
+                else:
+                    continue
+                link.conflict_types = list(
+                    dict.fromkeys([*link.conflict_types, *check.conflict_types])
+                )
+                link.supported_aspects = list(
+                    dict.fromkeys([*link.supported_aspects, *check.supported_aspects])
+                )
+                link.unsupported_aspects = list(
+                    dict.fromkeys([*link.unsupported_aspects, *check.unsupported_aspects])
+                )
+                deterministic_reason = ";".join(check.reasons)
+                link.rationale = "; ".join(
+                    item for item in (link.rationale, deterministic_reason) if item
+                )[:500]
+                link.verification_method = (
+                    "deterministic"
+                    if link.verification_method in {"rules", "pending_semantic"}
+                    else f"{link.verification_method}+deterministic"
+                )
+                if link.verdict is not original_verdict:
+                    deterministic_override_count += 1
+
+        internal_count_conflicts = find_report_count_conflicts(
+            [(claim.claim_id, claim.text) for claim in claims if is_reviewable_claim(claim)]
+        )
+        for claim in claims:
+            conflict_reasons = internal_count_conflicts.get(claim.claim_id, ())
+            if not conflict_reasons:
+                continue
+            report_internal_count_conflict_count += 1
+            for link in claim.links:
+                if not link.cited:
+                    continue
+                original_verdict = link.verdict
+                if link.verdict is SupportVerdict.SUPPORTED:
+                    link.verdict = SupportVerdict.PARTIALLY_SUPPORTED
+                    link.confidence = max(link.confidence, 0.95)
+                link.conflict_types = list(dict.fromkeys([*link.conflict_types, "number"]))
+                link.unsupported_aspects = list(
+                    dict.fromkeys([*link.unsupported_aspects, *conflict_reasons])
+                )
+                link.rationale = "; ".join(
+                    item for item in (link.rationale, *conflict_reasons) if item
+                )[:500]
+                link.verification_method = (
+                    "deterministic"
+                    if link.verification_method in {"rules", "pending_semantic"}
+                    else f"{link.verification_method}+deterministic"
+                )
+                if link.verdict is not original_verdict:
+                    deterministic_override_count += 1
 
         for claim in claims:
             if not claim.links:
@@ -560,6 +696,8 @@ conflict_types 只填写 TIME、NUMBER、ENTITY 中实际存在的类型，没�
                 "semantic_cache_miss_count": float(semantic_cache_misses),
                 "semantic_cache_size": float(len(self._semantic_cache)),
                 "reused_unchanged_claim_count": float(reused_claim_count),
+                "deterministic_override_count": float(deterministic_override_count),
+                "report_internal_count_conflict_count": float(report_internal_count_conflict_count),
             }
         )
         return ClaimLedger(
