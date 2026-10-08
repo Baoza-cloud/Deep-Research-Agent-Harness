@@ -393,7 +393,7 @@ Deep-Research-Agent-Harness/
 │   ├── run_ablation_experiments.py
 │   └── validate_formal_ablation.py
 ├── tests/                            # 按 Harness / Retrieval / Verifier 等领域拆分
-├── release/v1.2.1/SHA256SUMS         # 代码、数据、正式实验与演示哈希
+├── release/v1.2.2/SHA256SUMS         # 代码、数据、正式实验与演示哈希
 ├── docs/DEEP_RESEARCH_AGENT.md
 ├── .env.example
 └── pyproject.toml
@@ -403,9 +403,9 @@ Deep-Research-Agent-Harness/
 
 ## 发布与参与
 
-- 当前版本：`v1.2.1`
+- 当前版本：`v1.2.2`
 - [版本记录](CHANGELOG.md)
 - [贡献指南](CONTRIBUTING.md)
 - [安全策略](SECURITY.md)
 - [MIT License](LICENSE)
-- [v1.2.1 可复现哈希](release/v1.2.1/SHA256SUMS)
+- [v1.2.2 可复现哈希](release/v1.2.2/SHA256SUMS)

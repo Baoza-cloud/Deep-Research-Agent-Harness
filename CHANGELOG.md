@@ -3,6 +3,36 @@
 All notable changes to this project are documented in this file. The project follows
 [Semantic Versioning](https://semver.org/).
 
+## [1.2.2] - 2026-10-08
+
+### Added
+
+- Deterministic checks for composite Claims, enumerations, numbers, dates, entities, and
+  report-internal count conflicts.
+- Conservative Red issue locators for exact Claims, quoted problematic clauses, and numbered
+  section items, with semantic validation before evidence relinking.
+- Regression coverage for Markdown-safe Claim boundaries, scoped inference-overreach removal,
+  decorative citation deletion, explicit evidence relinking, and stale Red issue handling.
+
+### Changed
+
+- Structured Blue fallback now applies safe deterministic repairs to citation mismatch and
+  inference overreach while preserving independently supported sibling Claims.
+- Claim splitting preserves balanced Markdown emphasis and attached citations instead of
+  producing malformed Patch targets.
+- Deterministic rejection Trace events are emitted once per round, eliminating duplicate
+  rejection accounting.
+
+### Verified
+
+- 151 offline tests and 85% branch coverage.
+- Ruff formatting and static checks across all files covered by CI.
+- A same-configuration Tavily + DeepSeek Web rerun completed with zero final blockers, 97.96%
+  citation coverage, 93.88% Claim support, 86.89% citation correctness, and an 83.33%
+  deterministic Claim-Patch application rate.
+- The online result remains `completed_with_evidence_gaps`; it is an auditable case study rather
+  than a replacement for the pinned 35-question × 3-repeat Frozen benchmark.
+
 ## [1.2.1] - 2026-10-06
 
 ### Added
@@ -101,6 +131,7 @@ All notable changes to this project are documented in this file. The project fol
 - Shared memory, context compression, Claim–Evidence verification, and Red/Blue repair.
 - ResearchBench Frozen, Live, Adversarial, and retrieval calibration tracks.
 
+[1.2.2]: https://github.com/Baoza-cloud/Deep-Research-Agent-Harness/compare/v1.2.1...v1.2.2
 [1.2.1]: https://github.com/Baoza-cloud/Deep-Research-Agent-Harness/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/Baoza-cloud/Deep-Research-Agent-Harness/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/Baoza-cloud/Deep-Research-Agent-Harness/compare/v1.0.0...v1.1.0

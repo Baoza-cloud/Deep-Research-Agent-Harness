@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "deep-research-agent-harness"
-version = "1.2.1"
+version = "1.2.2"
 description = "Agent harness for reproducible multi-role deep research with retrieval, verification, adversarial repair, and evaluation."
 readme = "README.md"
 requires-python = ">=3.10"
