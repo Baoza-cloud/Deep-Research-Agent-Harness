@@ -1032,7 +1032,7 @@ class DeepResearchAgent:
                         ],
                     }
                 )
-            if claim_patch_result.rejected:
+            elif claim_patch_result.rejected:
                 trace.append(
                     {
                         "at": utc_now(),

@@ -5,6 +5,16 @@ from research_engine.claims import extract_claims
 
 
 class VerifierTests(unittest.IsolatedAsyncioTestCase):
+    def test_claim_extraction_preserves_balanced_bold_patch_targets(self):
+        claims = extract_claims(
+            "1. **Ingress 仍然是 GA 且受稳定性保证保护。** "
+            "Ingress API 是正式发布的，并且遵循稳定性保证 [facts-E1]。"
+        )
+
+        self.assertTrue(claims)
+        self.assertTrue(all(claim.source_text.count("**") % 2 == 0 for claim in claims))
+        self.assertTrue(any("Ingress API 是正式发布的" in claim.source_text for claim in claims))
+
     def test_claim_extraction_atomizes_chinese_sentences_with_trailing_citations(self):
         claims = extract_claims(
             "# 报告\n\n"
@@ -859,6 +869,163 @@ class VerifierTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertNotIn("保证支持全部筛选任务", result.report)
         self.assertEqual(result.applied[0].action, RepairAction.DELETE)
+
+    async def test_blue_resolves_quoted_inference_from_section_locator(self):
+        report = (
+            "# 报告\n\n## 发现\n"
+            "1. 字段存在，因此该接口保证支持全部筛选任务。 [facts-E1]\n"
+            "2. 该字段确实存在。 [facts-E1]"
+        )
+        review = ReviewResult(
+            False,
+            structured_issues=[
+                ReviewIssue(
+                    "R1",
+                    "logic",
+                    "报告称“字段存在，因此该接口保证支持全部筛选任务”，"
+                    "但证据不能推出全部筛选能力。",
+                    severity=2,
+                    action=RepairAction.MODIFY,
+                    target="“发现”第 1 条",
+                    category="inference_overreach",
+                )
+            ],
+        )
+
+        result = await BlueTeamRepairer(llm=None).repair(
+            "问题",
+            report,
+            [Evidence("facts-E1", "facts", "记录包含该字段。", "source")],
+            review,
+        )
+
+        self.assertNotIn("保证支持全部筛选任务", result.report)
+        self.assertIn("该字段确实存在", result.report)
+        self.assertTrue(
+            any(patch.patch_id.startswith("AUTO-inference-") for patch in result.applied)
+        )
+
+    async def test_blue_preserves_sibling_when_removing_citation_mismatch(self):
+        report = (
+            "# 报告\n\n## 安全\n"
+            "1. ReferenceGrant 属于错误的 API 组 [facts-E1]。"
+            "每个授权表示一个信任关系 [facts-E2]。"
+        )
+        review = ReviewResult(
+            False,
+            structured_issues=[
+                ReviewIssue(
+                    "R9",
+                    "citation_quality",
+                    "报告在“安全”第 1 条引用 facts-E1 说明 "
+                    "ReferenceGrant 属于错误的 API 组，但该引用与结论不匹配。",
+                    severity=2,
+                    action=RepairAction.MODIFY,
+                    target="“安全”第 1 条",
+                    category="citation_error",
+                )
+            ],
+        )
+        evidences = [
+            Evidence("facts-E1", "facts", "其他事实。", "source"),
+            Evidence("facts-E2", "facts", "每个授权表示一个信任关系。", "source"),
+        ]
+
+        result = await BlueTeamRepairer(llm=None).repair("问题", report, evidences, review)
+
+        self.assertNotIn("错误的 API 组", result.report)
+        self.assertIn("每个授权表示一个信任关系 [facts-E2]", result.report)
+        self.assertTrue(
+            any(patch.patch_id.startswith("AUTO-citation-") for patch in result.applied)
+        )
+
+    async def test_blue_relinks_red_named_direct_support_evidence(self):
+        report = "核心资源已经正式可用。 [old-E1]"
+        review = ReviewResult(
+            False,
+            structured_issues=[
+                ReviewIssue(
+                    "R2",
+                    "factuality",
+                    "报告称“核心资源已经正式可用”，但 old-E1 不支持该结论；"
+                    "该结论需要 verify-E2 证据直接支持，当前引用不匹配。",
+                    severity=2,
+                    action=RepairAction.MODIFY,
+                    target="结论第 1 条",
+                    category="factual_error",
+                )
+            ],
+        )
+        evidences = [
+            Evidence("old-E1", "facts", "旧版本仍在测试。", "source"),
+            Evidence("verify-E2", "verify", "核心资源已经正式可用。", "official"),
+        ]
+
+        result = await BlueTeamRepairer(llm=None).repair("问题", report, evidences, review)
+
+        self.assertIn("核心资源已经正式可用。 [verify-E2]", result.report)
+        self.assertNotIn("[old-E1]", result.report)
+        self.assertTrue(
+            any(patch.patch_id == "AUTO-citation-relink-R2" for patch in result.applied)
+        )
+
+    async def test_blue_unlinks_decorative_citation_but_keeps_advice(self):
+        target = "2. 建议后续查阅实现文档并运行兼容性测试 [facts-E1]。"
+        review = ReviewResult(
+            False,
+            structured_issues=[
+                ReviewIssue(
+                    "R10",
+                    "citation_quality",
+                    "报告称“建议后续查阅实现文档并运行兼容性测试 [facts-E1]”，"
+                    "但 facts-E1 未提及该建议，引用不匹配。",
+                    severity=2,
+                    action=RepairAction.MODIFY,
+                    target="建议第 2 条",
+                    category="citation_error",
+                )
+            ],
+        )
+
+        result = await BlueTeamRepairer(llm=None).repair(
+            "问题",
+            f"# 报告\n\n## 建议\n{target}",
+            [Evidence("facts-E1", "facts", "无关事实。", "source")],
+            review,
+        )
+
+        self.assertIn("建议后续查阅实现文档并运行兼容性测试", result.report)
+        self.assertNotIn("[facts-E1]", result.report)
+        self.assertTrue(any("citation-unlink" in patch.patch_id for patch in result.applied))
+
+    async def test_blue_does_not_delete_claim_red_acknowledges_as_supported(self):
+        target = "ReferenceGrant 自 v0.6.0 起属于 Standard Channel。 [facts-E1]"
+        review = ReviewResult(
+            False,
+            structured_issues=[
+                ReviewIssue(
+                    "R5",
+                    "logic",
+                    "报告称“ReferenceGrant 自 v0.6.0 起属于 Standard Channel”，"
+                    "但证据片段仅说明 ReferenceGrant 自 v0.6.0 起属于 Standard Channel；"
+                    "将其放在安全章节可能引起误解。",
+                    severity=2,
+                    action=RepairAction.MODIFY,
+                    target="安全章节",
+                    category="inference_overreach",
+                )
+            ],
+        )
+
+        result = await BlueTeamRepairer(llm=None).repair(
+            "问题",
+            target,
+            [Evidence("facts-E1", "facts", target, "source")],
+            review,
+        )
+
+        self.assertFalse(result.changed)
+        self.assertEqual(result.report, target)
 
     async def test_targeted_retrieval_aligns_cross_language_candidate(self):
         claim_text = "该客户端提供异步搜索接口并返回结构化结果。"
