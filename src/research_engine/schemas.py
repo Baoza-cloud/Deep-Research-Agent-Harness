@@ -156,6 +156,7 @@ class ClaimEvidenceLink:
     conflict_types: List[str] = field(default_factory=list)
     supported_aspects: List[str] = field(default_factory=list)
     unsupported_aspects: List[str] = field(default_factory=list)
+    verification_method: str = "rules"
 
 
 @dataclass
@@ -170,6 +171,9 @@ class ClaimRecord:
     verdict: SupportVerdict = SupportVerdict.UNKNOWN
     confidence: float = 0.0
     links: List[ClaimEvidenceLink] = field(default_factory=list)
+    parent_claim_id: str = ""
+    atomic_index: int = 1
+    atomic_count: int = 1
 
 
 @dataclass

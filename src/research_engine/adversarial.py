@@ -640,16 +640,24 @@ class BlueTeamRepairer:
         patches: list[ReportPatch] = []
         rejected: list[PatchRejection] = []
         handled_targets: set[str] = set()
+        claims_by_target: dict[str, list] = {}
+        for ledger_claim in ledger.claims:
+            target = ledger_claim.source_text.strip()
+            if target:
+                claims_by_target.setdefault(target, []).append(ledger_claim)
         for claim in ledger.claims:
             if len(patches) >= self.max_patches:
                 break
-            if claim.verdict in {
-                SupportVerdict.SUPPORTED,
-                SupportVerdict.NOT_APPLICABLE,
-            }:
-                continue
             target = claim.source_text.strip()
             if not target or target in handled_targets:
+                continue
+            claim_group = claims_by_target.get(target, [claim])
+            actionable_claims = [
+                item
+                for item in claim_group
+                if item.verdict not in {SupportVerdict.SUPPORTED, SupportVerdict.NOT_APPLICABLE}
+            ]
+            if not actionable_claims:
                 continue
             if report.count(target) != 1:
                 rejected.append(
@@ -660,6 +668,118 @@ class BlueTeamRepairer:
                 )
                 continue
             handled_targets.add(target)
+
+            # A compound source sentence can produce multiple atomic Claims.
+            # Repair it once as a group so that deleting one bad qualifier
+            # never deletes an independently supported sibling assertion.
+            if len(claim_group) > 1:
+                preserved_fragments: list[str] = []
+                preserved_evidence_ids: list[str] = []
+                conflict_types: set[str] = set()
+                for atomic_claim in claim_group:
+                    conflict_types.update(
+                        conflict for link in atomic_claim.links for conflict in link.conflict_types
+                    )
+                    if atomic_claim.verdict is SupportVerdict.SUPPORTED:
+                        preserved_fragments.append(atomic_claim.text)
+                        preserved_evidence_ids.extend(
+                            link.evidence_id
+                            for link in atomic_claim.links
+                            if link.cited and link.verdict is SupportVerdict.SUPPORTED
+                        )
+                        continue
+                    supported_candidates = [
+                        link
+                        for link in atomic_claim.links
+                        if not link.cited and link.verdict is SupportVerdict.SUPPORTED
+                    ]
+                    if (
+                        atomic_claim.verdict is not SupportVerdict.CONTRADICTED
+                        and supported_candidates
+                    ):
+                        preserved_fragments.append(atomic_claim.text)
+                        preserved_evidence_ids.extend(
+                            link.evidence_id for link in supported_candidates[:2]
+                        )
+                        continue
+                    partial_links = [
+                        link
+                        for link in atomic_claim.links
+                        if link.verdict is SupportVerdict.PARTIALLY_SUPPORTED
+                    ]
+                    supported_aspects = list(
+                        dict.fromkeys(
+                            aspect.strip()
+                            for link in partial_links
+                            for aspect in link.supported_aspects
+                            if aspect.strip()
+                        )
+                    )
+                    if supported_aspects:
+                        preserved_fragments.extend(supported_aspects[:3])
+                        preserved_evidence_ids.extend(
+                            link.evidence_id for link in partial_links[:2]
+                        )
+
+                patch_id = f"AUTO-claim-{claim.parent_claim_id or claim.claim_id}"
+                if preserved_fragments:
+                    replacement = "；".join(
+                        fragment.strip(" -*#\t。；; ")
+                        for fragment in dict.fromkeys(preserved_fragments)
+                        if fragment.strip(" -*#\t。；; ")
+                    )
+                    if replacement and not replacement.endswith(("。", "！", "？", ".", "!", "?")):
+                        replacement += "。"
+                    evidence_ids = list(dict.fromkeys(preserved_evidence_ids))[:4]
+                    if evidence_ids:
+                        replacement += " " + " ".join(f"[{item}]" for item in evidence_ids)
+                    replacement = _preserve_list_prefix(target, replacement)
+                    patches.append(
+                        ReportPatch(
+                            patch_id=patch_id,
+                            action=RepairAction.MODIFY,
+                            target=target,
+                            replacement=replacement,
+                            evidence_ids=evidence_ids,
+                            reason=(
+                                "复合 Claim 已原子化；程序保留获得完整或部分支持的子断言，"
+                                "移除未支持或冲突的限定"
+                            ),
+                        )
+                    )
+                elif all(item.verdict is SupportVerdict.CONTRADICTED for item in actionable_claims):
+                    detail = ",".join(sorted(conflict_types)) or "semantic"
+                    patches.append(
+                        ReportPatch(
+                            patch_id=patch_id,
+                            action=RepairAction.DELETE,
+                            target=target,
+                            replacement="",
+                            evidence_ids=[],
+                            reason=f"复合 Claim 的全部子断言均与证据冲突（{detail}），程序删除",
+                        )
+                    )
+                else:
+                    topics = "；".join(
+                        item.text.strip(" -*#\t。；; ") for item in actionable_claims[:3]
+                    )
+                    replacement = _preserve_list_prefix(
+                        target,
+                        f"基于当前证据，以下内容无法确认，已降级为待验证问题：“{topics}”",
+                    )
+                    patches.append(
+                        ReportPatch(
+                            patch_id=patch_id,
+                            action=RepairAction.MODIFY,
+                            target=target,
+                            replacement=replacement,
+                            evidence_ids=[],
+                            reason="复合 Claim 无可保留子断言，程序降级为证据缺口",
+                        )
+                    )
+                continue
+
+            claim = actionable_claims[0]
             supported_candidates = [
                 link
                 for link in claim.links

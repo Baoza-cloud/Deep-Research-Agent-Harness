@@ -18,6 +18,18 @@ class VerifierTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(claims[1].text, "Gateway API v1.5 的发布日期仍需核验。")
         self.assertEqual(claims[1].citations, ["facts-E2"])
 
+    def test_claim_extraction_splits_compound_assertion_into_atomic_claims(self):
+        claims = extract_claims(
+            "Gateway API 已正式发布；同时 Gateway API 支持 HTTPRoute。 [facts-E1]"
+        )
+
+        self.assertEqual(len(claims), 2)
+        self.assertEqual([claim.parent_claim_id for claim in claims], ["C1", "C1"])
+        self.assertEqual([claim.atomic_index for claim in claims], [1, 2])
+        self.assertTrue(all(claim.atomic_count == 2 for claim in claims))
+        self.assertTrue(all(claim.citations == ["facts-E1"] for claim in claims))
+        self.assertTrue(all(claim.source_text == claims[0].source_text for claim in claims))
+
     async def test_claim_ledger_uses_semantic_entailment_judgment(self):
         async def verifier_llm(prompt):
             self.assertIn("Claim–Evidence", prompt)
@@ -51,6 +63,200 @@ class VerifierTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(ledger.verification_mode, "semantic")
         self.assertEqual(ledger.claims[0].verdict, SupportVerdict.SUPPORTED)
         self.assertEqual(ledger.metrics["claim_support_rate"], 1.0)
+
+    async def test_semantic_verifier_omission_cannot_inherit_lexical_full_support(self):
+        async def verifier_llm(_prompt):
+            return '{"judgments": []}'
+
+        report = "该客户端明确支持异步搜索和结构化返回。 [facts-E1]"
+        ledger = await ClaimEvidenceVerifier(verifier_llm).build_ledger(
+            report,
+            [
+                Evidence(
+                    "facts-E1",
+                    "facts",
+                    "该客户端明确支持异步搜索和结构化返回。",
+                    "official",
+                )
+            ],
+            align_uncited_candidates=False,
+        )
+
+        self.assertEqual(ledger.verification_mode, "semantic_empty_fallback")
+        self.assertEqual(ledger.claims[0].verdict, SupportVerdict.INSUFFICIENT)
+        self.assertEqual(ledger.metrics["full_support_rate"], 0.0)
+        self.assertEqual(ledger.metrics["semantic_unverified_pair_count"], 1.0)
+
+    async def test_deterministic_count_conflict_overrides_semantic_full_support(self):
+        async def verifier_llm(_prompt):
+            return json.dumps(
+                {
+                    "judgments": [
+                        {
+                            "pair_id": "C1::facts-E1",
+                            "verdict": "SUPPORTED",
+                            "confidence": 0.97,
+                        },
+                        {
+                            "pair_id": "C1::facts-E2",
+                            "verdict": "SUPPORTED",
+                            "confidence": 0.97,
+                        },
+                    ]
+                }
+            )
+
+        ledger = await ClaimEvidenceVerifier(verifier_llm).build_ledger(
+            "Gateway API 具有三种稳定的 API 类别。 [facts-E1] [facts-E2]",
+            [
+                Evidence(
+                    "facts-E1",
+                    "facts",
+                    "Gateway API 具有三种稳定的 API 类别。",
+                    "official-v1",
+                ),
+                Evidence(
+                    "facts-E2",
+                    "facts",
+                    "Gateway API 具有四种稳定的 API 类别。",
+                    "official-v2",
+                ),
+            ],
+            align_uncited_candidates=False,
+        )
+
+        self.assertEqual(ledger.claims[0].verdict, SupportVerdict.CONTRADICTED)
+        self.assertEqual(ledger.metrics["number_conflict_count"], 1.0)
+        self.assertEqual(ledger.metrics["deterministic_override_count"], 1.0)
+        self.assertIn("deterministic", ledger.claims[0].links[1].verification_method)
+
+    async def test_report_internal_enumeration_conflict_is_not_full_support(self):
+        async def verifier_llm(prompt):
+            pairs = json.loads(prompt.split("待判断数据：", 1)[1])
+            return json.dumps(
+                {
+                    "judgments": [
+                        {
+                            "pair_id": item["pair_id"],
+                            "verdict": "SUPPORTED",
+                            "confidence": 0.98,
+                        }
+                        for item in pairs
+                    ]
+                }
+            )
+
+        ledger = await ClaimEvidenceVerifier(verifier_llm).build_ledger(
+            "Gateway API 具有稳定的 API 类别（GatewayClass、Gateway、HTTPRoute、"
+            "GRPCRoute）。 [facts-E1]\n"
+            "Gateway API 具有三种稳定的 API 类别。 [facts-E2]",
+            [
+                Evidence(
+                    "facts-E1",
+                    "facts",
+                    "稳定类别包括 GatewayClass、Gateway、HTTPRoute、GRPCRoute。",
+                    "official-new",
+                ),
+                Evidence(
+                    "facts-E2",
+                    "facts",
+                    "Gateway API 具有三种稳定的 API 类别。",
+                    "official-old",
+                ),
+            ],
+            align_uncited_candidates=False,
+        )
+
+        self.assertEqual(
+            [claim.verdict for claim in ledger.claims],
+            [SupportVerdict.PARTIALLY_SUPPORTED, SupportVerdict.PARTIALLY_SUPPORTED],
+        )
+        self.assertEqual(ledger.metrics["report_internal_count_conflict_count"], 2.0)
+        self.assertTrue(all("number" in claim.links[0].conflict_types for claim in ledger.claims))
+
+    async def test_generic_item_counts_do_not_create_cross_topic_false_conflict(self):
+        async def verifier_llm(prompt):
+            pairs = json.loads(prompt.split("待判断数据：", 1)[1])
+            return json.dumps(
+                {
+                    "judgments": [
+                        {
+                            "pair_id": item["pair_id"],
+                            "verdict": "SUPPORTED",
+                            "confidence": 0.98,
+                        }
+                        for item in pairs
+                    ]
+                }
+            )
+
+        ledger = await ClaimEvidenceVerifier(verifier_llm).build_ledger(
+            "该组件支持最新 5 个次要版本。 [facts-E1]\n"
+            "组件 A 包含三种资源类别。 [facts-E2]\n"
+            "组件 B 包含四种资源类别。 [facts-E3]",
+            [
+                Evidence(
+                    "facts-E1",
+                    "facts",
+                    "该组件支持最新 5 个次要版本；文档还给出了 4 个配置示例。",
+                    "official",
+                ),
+                Evidence(
+                    "facts-E2",
+                    "facts",
+                    "组件 A 包含三种资源类别。",
+                    "official-a",
+                ),
+                Evidence(
+                    "facts-E3",
+                    "facts",
+                    "组件 B 包含四种资源类别。",
+                    "official-b",
+                ),
+            ],
+            align_uncited_candidates=False,
+        )
+
+        self.assertTrue(all(claim.verdict is SupportVerdict.SUPPORTED for claim in ledger.claims))
+        self.assertEqual(ledger.metrics["report_internal_count_conflict_count"], 0.0)
+
+    async def test_deterministic_qualifiers_distinguish_partial_and_conflicted_support(self):
+        async def verifier_llm(prompt):
+            pairs = json.loads(prompt.split("待判断数据：", 1)[1])
+            return json.dumps(
+                {
+                    "judgments": [
+                        {
+                            "pair_id": item["pair_id"],
+                            "verdict": "SUPPORTED",
+                            "confidence": 0.96,
+                        }
+                        for item in pairs
+                    ]
+                }
+            )
+
+        ledger = await ClaimEvidenceVerifier(verifier_llm).build_ledger(
+            "该系统包含四种稳定类别。 [facts-E1]\n"
+            "腾讯公司在 2025 年的市场份额达到 50%。 [facts-E2]",
+            [
+                Evidence("facts-E1", "facts", "该系统包含稳定类别。", "official-1"),
+                Evidence(
+                    "facts-E2",
+                    "facts",
+                    "阿里公司在 2024 年的市场份额达到 40%。",
+                    "official-2",
+                ),
+            ],
+            align_uncited_candidates=False,
+        )
+
+        self.assertEqual(ledger.claims[0].verdict, SupportVerdict.PARTIALLY_SUPPORTED)
+        self.assertEqual(ledger.claims[1].verdict, SupportVerdict.CONTRADICTED)
+        self.assertEqual(ledger.metrics["partially_supported_claim_count"], 1.0)
+        self.assertEqual(ledger.metrics["time_conflict_count"], 1.0)
+        self.assertEqual(ledger.metrics["number_conflict_count"], 1.0)
+        self.assertEqual(ledger.metrics["entity_conflict_count"], 1.0)
 
     async def test_claim_verifier_caches_unchanged_pairs_only(self):
         calls = 0
@@ -261,6 +467,79 @@ class VerifierTests(unittest.IsolatedAsyncioTestCase):
         self.assertIs(selected, dynamic)
         self.assertEqual(reason, "fallback_rejected_by_hard_metrics")
 
+    def test_dynamic_final_guard_uses_ab_comparison_evidence_coverage(self):
+        dynamic = ReportQualityCandidate(
+            "dynamic",
+            ClaimLedger(metrics={"claim_support_rate": 1.0}),
+            ReviewResult(True, metrics={"citation_coverage": 1.0}, total_score=0.95),
+            "dynamic_swarm",
+            comparison_coverage=0.5,
+            comparison_missing_cell_count=2,
+        )
+        fixed = ReportQualityCandidate(
+            "fixed",
+            ClaimLedger(metrics={"claim_support_rate": 1.0}),
+            ReviewResult(True, metrics={"citation_coverage": 1.0}, total_score=0.90),
+            "fixed_harness_fallback",
+            comparison_coverage=1.0,
+            comparison_missing_cell_count=0,
+        )
+
+        selected, reason = select_quality_candidate(
+            dynamic,
+            fixed,
+            min_claim_support_rate=0.8,
+            min_citation_coverage=0.8,
+            max_pass_issue_severity=1,
+            support_drop_tolerance=0.02,
+        )
+
+        self.assertIs(selected, fixed)
+        self.assertEqual(reason, "fallback_clears_hard_quality_gate")
+
+    def test_dynamic_final_guard_does_not_trade_red_blocker_for_ab_coverage(self):
+        dynamic = ReportQualityCandidate(
+            "dynamic",
+            ClaimLedger(metrics={"claim_support_rate": 1.0}),
+            ReviewResult(True, metrics={"citation_coverage": 1.0}, total_score=0.90),
+            "dynamic_swarm",
+            comparison_coverage=0.5,
+            comparison_missing_cell_count=1,
+        )
+        fixed = ReportQualityCandidate(
+            "fixed",
+            ClaimLedger(metrics={"claim_support_rate": 1.0}),
+            ReviewResult(
+                False,
+                structured_issues=[
+                    ReviewIssue(
+                        "R-blocker",
+                        "factuality",
+                        "存在事实冲突",
+                        severity=3,
+                        category="factual_error",
+                    )
+                ],
+                metrics={"citation_coverage": 1.0},
+                total_score=0.95,
+            ),
+            "fixed_harness_fallback",
+            comparison_coverage=1.0,
+            comparison_missing_cell_count=0,
+        )
+
+        selected, reason = select_quality_candidate(
+            dynamic,
+            fixed,
+            min_claim_support_rate=0.8,
+            min_citation_coverage=0.8,
+            max_pass_issue_severity=1,
+            support_drop_tolerance=0.02,
+        )
+
+        self.assertIs(selected, dynamic)
+        self.assertEqual(reason, "dynamic_wins_quality_comparison")
+
     def test_claim_repair_queries_merge_similar_gaps(self):
         ledger = ClaimLedger(
             claims=[
@@ -445,6 +724,57 @@ class VerifierTests(unittest.IsolatedAsyncioTestCase):
                 for patch in result.applied
             )
         )
+
+    def test_blue_atomic_repair_preserves_supported_sibling_claim(self):
+        source = "系统支持异步搜索；系统保证结果绝对正确。 [facts-E1]"
+        ledger = ClaimLedger(
+            claims=[
+                ClaimRecord(
+                    "C1.1",
+                    "系统支持异步搜索",
+                    source_text=source,
+                    citations=["facts-E1"],
+                    verdict=SupportVerdict.SUPPORTED,
+                    links=[
+                        ClaimEvidenceLink(
+                            "facts-E1",
+                            SupportVerdict.SUPPORTED,
+                            0.98,
+                        )
+                    ],
+                    parent_claim_id="C1",
+                    atomic_index=1,
+                    atomic_count=2,
+                ),
+                ClaimRecord(
+                    "C1.2",
+                    "系统保证结果绝对正确。",
+                    source_text=source,
+                    citations=["facts-E1"],
+                    verdict=SupportVerdict.CONTRADICTED,
+                    links=[
+                        ClaimEvidenceLink(
+                            "facts-E1",
+                            SupportVerdict.CONTRADICTED,
+                            0.99,
+                        )
+                    ],
+                    parent_claim_id="C1",
+                    atomic_index=2,
+                    atomic_count=2,
+                ),
+            ]
+        )
+
+        result = BlueTeamRepairer(llm=None).repair_claim_gaps(
+            source,
+            [Evidence("facts-E1", "facts", "系统支持异步搜索。", "official")],
+            ledger,
+        )
+
+        self.assertEqual(result.report, "系统支持异步搜索。 [facts-E1]")
+        self.assertNotIn("绝对正确", result.report)
+        self.assertEqual(result.applied[0].action, RepairAction.MODIFY)
 
     def test_blue_compacts_multiple_evidence_gaps_per_section(self):
         lines = [
